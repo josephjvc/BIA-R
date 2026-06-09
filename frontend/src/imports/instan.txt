@@ -1,0 +1,384 @@
+Add a new professional screen to the existing “BIA-R” SaaS web prototype called “Continuity Instances”. Keep the same premium visual system.
+
+Goal:
+Create a new screen where users can manage continuity analysis instances.
+
+A continuity instance represents a complete BIA + Risk Assessment workspace. Each instance contains:
+- Instance Description
+- BIA Framework
+- Dependencies
+- Risk Assessment
+- Reports
+- Comments and change notes
+- Activity history 
+- Participant role labels
+
+Important:
+Do not include an “Import template” button.
+Do not include exporting custom instance files.
+The only exports allowed are PDF outputs, such as:
+- Export instance summary PDF
+- Export instance history PDF
+
+Screen name:
+“Continuity Instances”
+
+Sidebar:
+Add a new sidebar item above Dashboard:
+“Instances”
+Use a clean folder, layers, or document-stack icon.
+Make this new item active on the Continuity Instances screen.
+
+Header:
+Use the existing shared header style with:
+- Search bar
+- EN/ES language toggle
+- Notification icon
+- User name
+- User role
+- Circular avatar
+
+Screen title:
+“Continuity Instances”
+
+Subtitle:
+“Create, manage and track continuity analysis workspaces.”
+
+Main layout:
+
+1. Top action and filter bar
+
+Include:
+- Primary button: “New instance”
+- Secondary button: “Export history PDF”
+- Search input placeholder: “Search instances, organization, owner…”
+- Date range selector
+- Status filter dropdown:
+  All
+  In progress
+  Reviewed
+  Approved
+  Completed
+- Secondary tab or link:
+  “Archived instances”
+
+Do not show archived instances in the main list by default.
+Archived instances must appear only in a separate archived view.
+
+2. KPI summary cards
+
+Create 4 compact KPI cards:
+- Active instances
+- Under review
+- Approved
+- Completed
+
+Each card must include:
+- Small linear icon
+- Large number
+- Short label
+- Subtle trend or helper text
+
+3. Instances table
+
+Create a modern, clean table with the following columns only:
+
+- Instance name
+- Organization
+- Version
+- Status
+- Owner
+- Last modified
+- Progress
+- Actions
+
+Important table rules:
+- Do not include a Roles column.
+- Roles must not appear in the main instances table.
+- Last modified must show both date and author.
+Example:
+“Apr 14, 2026 by Mike Torres”
+- Progress means the percentage of completion of the continuity analysis workflow, based on completed sections.
+- Actions means the available operations for the instance.
+
+Example rows:
+- “Q1 2026 Continuity Analysis” | “Bebidas Perú S.A.” | “v1.0” | “In progress” | “Camila Vargas” | “Apr 14, 2026 by Mike Torres” | “68%”
+- “Distribution BIA Review” | “Bebidas Perú S.A.” | “v2.0” | “Reviewed” | “D. Romero” | “Apr 02, 2026 by Laura Pérez” | “84%”
+- “Risk Assessment 2026” | “Bebidas Perú S.A.” | “v1.3” | “Approved” | “M. Quispe” | “Mar 28, 2026 by Camila Vargas” | “100%”
+- “Supply Chain Continuity” | “Bebidas Perú S.A.” | “v1.0” | “Completed” | “Camila Vargas” | “Mar 15, 2026 by Diego Ramos” | “100%”
+
+Use subtle status chips.
+
+Status chips must be sequential:
+- In progress
+- Reviewed
+- Approved
+- Completed
+- Archived
+
+Status behavior:
+- Users should not manually assign arbitrary statuses.
+- Statuses represent the general sequential state of the instance.
+- The workflow is:
+  In progress → Reviewed → Approved → Completed → Archived
+- Archived instances are hidden from the main table by default.
+- Archived instances appear only in the archived view.
+
+Actions column:
+Use compact icon buttons or text buttons:
+- Open
+- Edit
+- Export PDF
+- Export history PDF
+- Archive
+- More
+
+Do not include:
+- Share
+- Import template
+- Export custom instance file
+
+Clarify visually:
+- “Open” enters the continuity analysis workspace.
+- “Edit” modifies general instance information.
+- “Export PDF” generates a PDF summary report of the instance.
+- “Export history PDF” generates a PDF with the full history of changes to the instance since it was created.
+- “Archive” moves the instance out of the main list.
+- “More” can contain secondary actions such as duplicate, view activity, Terminate Instance and DELETE (if instance is Terminated)
+
+4. Instance detail side panel
+
+When selecting an instance, show a right-side detail panel titled:
+“Instance details”
+
+The panel must include:
+- Instance name
+- Organization
+- Version
+- Status chip
+- Owner
+- Created date
+- Last modified by
+- Last modified date
+- Description
+- Progress by section:
+  Instance Description
+  BIA Framework
+  Dependencies
+  Risk Assessment
+  Reports
+- Participants
+- Comments and change notes
+- Activity history
+
+Progress by section:
+Show each section with a small progress bar, status, or completion indicator:
+- Instance Description
+- BIA Framework
+- Dependencies
+- Risk Assessment
+- Reports
+
+Buttons:
+- “Open workspace”
+- “Edit details”
+- “Export PDF”
+- “Export history PDF”
+- “View history”
+- “Archive”
+
+Do not include “Share instance”.
+
+5. Participants section
+
+Inside the detail panel, add a small section called:
+“Participants”
+
+Show participants as compact rows:
+- Avatar
+- Name
+- Email
+- Role label
+
+Role label options:
+- Author
+- Responsible
+- Reviewer
+- Approver
+
+Important role rule:
+These roles are only informative labels inside the instance.
+They do not change permissions.
+All assigned users can perform the same actions.
+The role label only indicates their responsibility or participation type.
+
+Do not show participants or role labels in the main table.
+
+6. New instance modal
+
+Create a modal titled:
+“Create continuity instance”
+
+Fields:
+- Instance name
+- Organization
+- Version
+- Country
+- Business industry
+- Owner
+- Description
+
+Do not include a template selector.
+
+Show a workflow preview on the right side:
+Step 1: Instance Description
+Step 2: BIA Framework
+Step 3: Dependencies
+Step 4: Risk Assessment
+Step 5: Reports
+
+Buttons:
+- “Cancel”
+- “Create instance”
+
+After creation, the instance starts automatically with status:
+“In progress”
+
+7. Edit instance modal
+
+Create a modal titled:
+“Edit instance details”
+
+Fields:
+- Instance name
+- Organization
+- Version
+- Country
+- Business industry
+- Owner
+- Description
+
+Buttons:
+- “Cancel”
+- “Save changes”
+
+8. Activity and version history
+
+Inside the detail panel or as a secondary tab, include a compact activity timeline titled:
+“Activity history”
+
+The timeline must show changes to the instance from the moment it was created.
+
+Example events:
+- Created instance
+- Updated Instance Description
+- Updated BIA Framework
+- Added dependency section
+- Updated Risk Assessment
+- Exported summary PDF
+- Exported history PDF
+- Marked as reviewed
+- Marked as approved
+- Marked as completed
+- Commented
+- Archived instance
+
+Each event must show:
+- Author
+- Date
+- Action
+- Optional change description
+
+9. Export history PDF behavior
+
+Add a clear UI element for exporting the instance history as PDF.
+
+When the user clicks:
+“Export history PDF”
+
+Show a small confirmation modal titled:
+“Export instance history”
+
+Modal content:
+“This PDF will include the full activity and change history of this continuity instance since its creation.”
+
+Include checkboxes:
+- Include activity timeline
+- Include comments and change notes
+- Include status changes
+- Include participant changes
+- Include version changes
+
+Buttons:
+- “Cancel”
+- “Generate history PDF”
+
+The exported PDF is a document report, not an importable instance file.
+
+10. Comments and change notes
+
+At the bottom of the detail panel, add a comments area:
+- Text input: “Add comment or change note…”
+- Button: “Post”
+
+Each comment must show:
+- Author
+- Date
+- Message
+
+Example comment:
+“Final version reviewed for Q1 continuity assessment.”
+
+This comment area at the bottom should appears in all instance windows.
+
+11. Archived instances view
+
+Create a separate archived view or tab called:
+“Archived instances”
+
+This view shows archived instances only.
+
+Columns:
+- Instance name
+- Organization
+- Version
+- Archived date
+- Archived by
+- Last status before archive
+- Actions
+
+Actions:
+- Open
+- Restore
+- Export PDF
+- Export history PDF
+- Terminate Instance (if instance is not terminated)
+- DELETE (if instance is Terminated)
+
+Keep this archived view visually secondary and clearly separated from the main active instances list.
+
+12. UX requirements
+
+- Make it clear that each instance is a full continuity analysis workspace.
+- Keep the main table simple and focused.
+- Avoid showing too many role details in the main list.
+- Use progressive disclosure: details, participants, comments, and activity history should appear only in the side panel or modals.
+- Do not include import functionality.
+- Do not include custom instance file export.
+- Only PDF outputs are allowed.
+- Use the existing BIA-R visual style.
+- Make the screen ready for frontend conversion into React/Next.js.
+
+Suggested frontend components:
+- Instances.tsx
+- InstanceDetailPanel.tsx
+- NewInstanceModal.tsx
+- EditInstanceModal.tsx
+- ArchivedInstancesView.tsx
+- InstanceHistoryTimeline.tsx
+- InstanceStatusChip.tsx
+- InstanceProgressBar.tsx
+- ExportHistoryPdfModal.tsx
+
+Final result:
+A polished, minimalist, Apple-inspired “Continuity Instances” management screen that allows users to create, open, edit, export PDF summaries, export PDF history, track progress, review activity, add comments, and archive continuity analysis instances.

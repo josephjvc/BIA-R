@@ -1,0 +1,29 @@
+# Node
+node_modules/
+dist/
+.pnpm-store/
+
+# Java / Maven
+backend/target/
+*.class
+*.jar
+*.war
+.settings/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

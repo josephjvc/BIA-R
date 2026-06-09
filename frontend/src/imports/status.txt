@@ -1,0 +1,360 @@
+Redesign the BIA-R platform to include a clear continuity instance status workflow.
+
+Context:
+BIA-R is an Apple-inspired SaaS platform for Business Impact Analysis ISO 22317 and Risk Management ISO 31000. Users first select a continuity analysis instance, then enter the selected instance workspace. Each instance contains Department Description, BIA Framework, Dependencies, Risk Assessment, Reports, history, comments and participants.
+
+Goal:
+Improve the UX/UI to clearly represent the lifecycle of a continuity instance, including status transitions, review actions, approval actions, completion, termination, archiving and duplication for a new period.
+
+Keep the existing BIA-R style:
+- White and pearl-gray surfaces
+- Deep navy accents
+- Rounded corners
+- Soft shadows
+- Minimalist icons
+- Clean typography
+- Spacious layout
+- Professional enterprise SaaS feel
+
+Instance statuses:
+Use these statuses only:
+
+1. In progress
+2. Completed
+3. Reviewed
+4. Approved
+5. Disapproved
+6. Finished
+7. Archived
+
+Status meaning:
+- In progress: the instance is being created, filled or modified.
+- Completed: all required sections and fields are complete. This status is automatic.
+- Reviewed: the instance was marked as reviewed by a user after completion.
+- Approved: the reviewed instance was approved.
+- Disapproved: the reviewed instance was rejected and requires changes.
+- Finished: the instance was officially closed by a user or expired by date.
+- Archived: the instance is hidden from the active list and kept for historical consultation.
+
+Status workflow:
+New instance → In progress
+In progress → Completed automatically when all required sections are complete
+Completed → Reviewed when the user clicks “Mark as reviewed”
+Reviewed → Approved when the user clicks “Mark as approved”
+Reviewed → Disapproved when the user clicks “Mark as disapproved”
+Disapproved → In progress when a user edits critical analysis content
+Approved → Finished when the user closes the instance or the instance expires
+Finished → Archived when the user archives the instance
+
+Important rule:
+Only structural or critical analysis changes return the instance to “In progress”.
+
+Critical changes include:
+- Editing Department Description
+- Editing Organizational Context
+- Editing BIA Framework
+- Editing Dependencies
+- Editing Risk Assessment
+- Editing processes
+- Editing risks
+- Editing RTO, RPO, MTPD
+- Editing impact criteria
+- Editing probability or impact values
+
+Administrative actions do not change the status:
+- Adding comments
+- Adding change notes
+- Viewing history
+- Exporting PDF
+- Exporting history PDF
+- Opening reports
+- Viewing dashboards
+- Changing UI filters
+
+1. Instance selector screen updates
+
+Update the “Continuity Instances” selector screen to show the new status model.
+
+Instance cards must show:
+- Status chip
+- Instance name
+- Organization and version
+- Owner
+- Last modified date and author
+- Progress percentage
+- Mini progress bar
+- Section indicators:
+  Department
+  BIA
+  Dependencies
+  Risk
+  Reports
+- Primary action: Open
+- Secondary actions in a compact More menu:
+  Edit
+  Export PDF
+  Export history PDF
+  Archive
+
+Use status chips:
+- In progress
+- Completed
+- Reviewed
+- Approved
+- Disapproved
+- Finished
+- Archived
+
+Design the status chips with subtle, professional colors:
+- In progress: blue
+- Completed: green
+- Reviewed: purple or neutral blue
+- Approved: green
+- Disapproved: soft red
+- Finished: neutral gray or deep navy
+- Archived: muted gray
+
+Archived instances must appear only in the Archived instances tab.
+
+Finished instances must remain visible in active instances unless archived.
+
+2. Finished instance behavior
+
+For instances with status “Finished”, show a special action:
+“Duplicate for new period”
+
+This action allows creating a new instance based on the finished one.
+
+In the card More menu for Finished instances, include:
+- Open
+- Duplicate for new period
+- Export PDF
+- Export history PDF
+- Archive
+
+When clicking “Duplicate for new period”, open a modal titled:
+“Duplicate instance for new period”
+
+Modal fields:
+- New instance name
+- New period
+- Organization
+- Version
+- Owner
+- Description
+
+Show helper text:
+“This will create a new continuity analysis instance using the selected finished instance as a base.”
+
+Include copy options as checkboxes:
+- Copy Department Description
+- Copy Organizational Context
+- Copy Dependencies
+- Copy BIA criteria
+- Copy Risk parameters
+- Copy participants
+- Do not copy comments and history
+
+Buttons:
+- Cancel
+- Create new period instance
+
+New duplicated instances must start with status:
+“In progress”
+
+3. Selected instance workspace sidebar updates
+
+Inside a selected instance workspace, the left sidebar must show the active instance card with:
+
+- Label: “ACTIVE INSTANCE”
+- Instance name
+- Organization and version
+- Current status chip
+- Switch instance link
+
+Example:
+ACTIVE INSTANCE
+Q1 2026 Continuity Analysis
+Bebidas Perú S.A. · v1.0
+[In progress]
+Switch instance →
+
+Add a compact status workflow indicator below the active instance card.
+
+Status workflow indicator:
+In progress → Completed → Reviewed → Approved / Disapproved → Finished
+
+Keep it minimal, using small dots, labels or a horizontal stepper.
+
+Highlight the current status.
+
+If the status is Disapproved, show a subtle warning helper:
+“Changes required before review.”
+
+If the status is Finished, show a subtle helper:
+“This instance is closed. Duplicate it for a new period or archive it.”
+
+4. Review and approval actions
+
+Add a small section in the selected instance workspace sidebar or header called:
+“Instance actions”
+
+This section should show context-aware action buttons depending on the current status.
+
+Rules:
+
+If status is In progress:
+- No review buttons yet.
+- Show helper:
+  “Complete all required sections to enable review.”
+
+If status is Completed:
+Show button:
+- Mark as reviewed
+
+If status is Reviewed:
+Show buttons:
+- Mark as approved
+- Mark as disapproved
+
+If status is Approved:
+Show button:
+- Finish instance
+
+If status is Disapproved:
+Show helper:
+“Update the required sections to continue.”
+Do not show approve button until the instance returns to In progress, becomes Completed again, and is reviewed again.
+
+If status is Finished:
+Show buttons:
+- Duplicate for new period
+- Archive
+- Export PDF
+- Export history PDF
+
+If status is Archived:
+Do not show regular edit actions.
+Show:
+- Restore
+- Export PDF
+- Export history PDF
+
+Keep buttons minimal.
+Use primary button only for the most important next action.
+Use secondary or ghost buttons for less important actions.
+
+5. Completion logic visualization
+
+Add a compact completion checklist or progress block showing required sections:
+
+Required sections:
+- Department Description
+- BIA Framework
+- Dependencies
+- Risk Assessment
+- Reports
+
+When all required sections are complete, show:
+“Ready for review”
+
+At that point, status becomes:
+Completed
+
+Do not let the user manually mark an instance as Completed.
+Completed must be automatic.
+
+Tooltip for Completed:
+“Completed is assigned automatically when all required sections are filled.”
+
+Tooltip for Mark as reviewed:
+“Use this when the completed instance is ready for approval.”
+
+Tooltip for Mark as disapproved:
+“Use this when reviewed information requires correction.”
+
+Tooltip for Finished:
+“Finished closes the instance for the current period.”
+
+Tooltip for Duplicate for new period:
+“Creates a new instance based on this finished one.”
+
+6. Activity history updates
+
+Update the activity history timeline to include status transitions.
+
+Example events:
+- Created instance
+- Updated Department Description
+- Updated BIA Framework
+- Added dependency section
+- Updated Risk Assessment
+- Instance automatically marked as Completed
+- Marked as Reviewed
+- Marked as Approved
+- Marked as Disapproved
+- Critical content edited, status returned to In progress
+- Marked as Finished
+- Duplicated for new period
+- Archived instance
+- Restored instance
+- Exported summary PDF
+- Exported history PDF
+
+Each event must show:
+- Author
+- Date
+- Action
+- Optional change description
+
+For automatic events, show:
+“System”
+as the author.
+
+Example:
+“Instance automatically marked as Completed”
+“System · Apr 15”
+
+7. Comments and change notes
+
+Comments and change notes must not change the instance status.
+
+Add a small tooltip or helper:
+“Comments do not affect the instance status.”
+
+Keep comments in the sidebar and details drawer as currently designed.
+
+8. Archived instances view
+
+Archived instances must appear only in the Archived instances tab.
+
+Archived card actions:
+- Open
+- Restore
+- Export PDF
+- Export history PDF
+- More
+
+Archived instances should look muted but still readable.
+
+9. UX requirements
+
+Make the lifecycle easy to understand.
+Avoid overwhelming users with many buttons.
+Use progressive disclosure:
+- Show only the next valid actions based on the current status.
+- Hide unavailable actions.
+- Use tooltips for explanations.
+- Show full history only in a drawer or modal.
+- Use compact cards and chips.
+
+The status workflow must feel professional, auditable and suitable for a continuity management platform.
+
+10. Final result
+
+Redesign the platform so users can clearly understand and manage the lifecycle of each continuity instance:
+In progress → Completed → Reviewed → Approved or Disapproved → Finished → Archived.
+
+Finished instances can be duplicated into a new period.
+Only critical analysis changes return the instance to In progress.
+Comments, exports and administrative actions do not change the instance status.

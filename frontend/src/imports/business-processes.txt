@@ -1,0 +1,259 @@
+Refine the “Organizational Context” screen in the BIA-R selected instance workspace.
+
+Context:
+The user is inside a selected continuity instance. The current screen shows Organizational Context with tabs such as Business Units, Processes, Assets, Third parties and Interdependencies.
+
+Required change:
+Give more emphasis to business processes as the main unit of analysis. The department or business unit should be treated as contextual information associated with each process, not as the main object.
+
+Goal:
+Allow users to add, edit, review and manage business processes within the active continuity instance. These processes will later be used by the BIA, Dependencies, Risk Assessment and Reports modules.
+
+Keep the Apple-inspired BIA-R SaaS style:
+white cards, pearl-gray background, deep navy accents, rounded corners, soft shadows, minimalist icons, clean typography and spacious layout.
+
+1. Processes tab
+
+Make the “Processes” tab the main focus of the Organizational Context screen.
+
+Tabs should remain:
+- All
+- Business Units
+- Processes
+- Assets
+- Third parties
+- Interdependencies
+
+When “Processes” is selected, show a process management view.
+
+2. Primary action
+
+Keep the main primary button:
+“Register Process”
+
+This button opens a modal or side panel to add a new process to the active continuity instance.
+
+3. Register Process modal
+
+Create a clean modal or right-side panel titled:
+“Register business process”
+
+Subtitle:
+“Add a process to the current continuity instance.”
+
+Fields:
+
+Basic information:
+- Process name
+- Associated business unit / department
+- Process owner
+- Description
+- Key objectives
+
+Location and scope:
+- Country / region
+- Sites or locations
+- Number of employees involved
+- BIA review periodicity
+
+Operational details:
+- Critical time period
+- Process status
+- Initial criticality
+- Notes
+
+Buttons:
+- Cancel
+- Save process
+
+4. Department as context
+
+Inside the process form, use “Associated business unit / department” as a field.
+
+Do not make Department the main entity of the screen.
+The process must be the primary object.
+
+Show helper text:
+“The department is used as context. The process is the main unit for BIA and risk analysis.”
+
+5. Process activities
+
+Inside the Register Process modal, add a section called:
+“Process activities”
+
+Allow users to add multiple activities related to the process.
+
+Each activity row should include:
+- Activity name
+- Critical time period
+- Notes
+
+Example activities:
+- Accounts Receivable
+- Authorise and Manage Credit
+- Customer Master Data Management
+- Manage and Process Account Collections
+- Manage and Process Disputes and Deductions
+
+Critical time period examples:
+- Normal daily task
+- Daily, on demand
+- Monthly, on demand
+
+Add button:
+“Add activity”
+
+6. Processes table
+
+Update the Processes table to show process-focused columns:
+
+- Process
+- Business unit / Department
+- Owner
+- Activities
+- Dependencies
+- Status
+- Criticality
+- Last updated
+
+Do not overload the table with too much information.
+
+Use chips for:
+- Status
+- Criticality
+
+Status examples:
+- Active
+- Under review
+- Critical
+- Incomplete
+
+Criticality examples:
+- Low
+- Medium
+- High
+- Critical
+
+7. Process detail panel
+
+When selecting a process, show a right-side detail panel.
+
+Panel title:
+Process name
+
+Show:
+- Business unit / department
+- Owner
+- Description
+- Key objectives
+- Country / region
+- Sites
+- Employees involved
+- BIA review periodicity
+- Critical time period
+- Activities
+- Linked resources
+- Dependencies
+- Last updated by
+- Last updated date
+
+Buttons:
+- Open BIA
+- Edit
+- View dependencies
+- Add risk
+
+8. Process activities in detail panel
+
+In the detail panel, show a compact activities list.
+
+Each activity should show:
+- Activity name
+- Critical time period
+
+Use a clean mini-table or card list.
+
+9. Validation behavior
+
+Add validation states for required fields.
+
+Required fields:
+- Process name
+- Associated business unit / department
+- Process owner
+- Critical time period
+
+If required data is missing, show inline validation messages.
+
+10. Instance status rule
+
+If a user edits critical process information, the active continuity instance status must return to:
+“In progress”
+
+Critical process changes include:
+- Creating a process
+- Editing process name
+- Editing owner
+- Editing key objectives
+- Editing critical time period
+- Adding or removing process activities
+- Changing dependencies
+- Changing criticality
+
+Administrative actions must not change the instance status:
+- Viewing process details
+- Filtering
+- Searching
+- Exporting PDF
+- Adding comments
+
+Add a subtle confirmation message after saving:
+“Process saved. Instance status returned to In progress.”
+
+11. Search and filters
+
+The header search should search within Organizational Context by:
+- Process name
+- Business unit
+- Owner
+- Activity
+- Site
+- Status
+- Criticality
+- Dependency
+
+Inside the Processes tab, keep compact filters:
+- Area / Business unit
+- Status
+- Criticality
+
+12. Empty state
+
+If no processes exist, show an elegant empty state:
+
+Title:
+“No processes registered yet”
+
+Text:
+“Register your first business process to start building the continuity analysis context.”
+
+Button:
+“Register Process”
+
+13. UX requirements
+
+Make the screen process-centered.
+Avoid making it feel like a department form copied from Excel.
+Use progressive disclosure:
+- Main table shows only key process data.
+- Detail panel shows full process information.
+- Modal handles creation and editing.
+
+The user must understand that processes are the foundation for:
+- BIA
+- Dependencies
+- Risk Assessment
+- Reports
+
+Final result:
+A refined Organizational Context screen where users can register and manage business processes as the main unit of continuity analysis, while business units or departments remain contextual metadata.
