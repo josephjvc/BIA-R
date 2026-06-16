@@ -1,0 +1,45 @@
+name: biar-back-db
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: biar-database
+    environment:
+      POSTGRES_DB: biar
+      POSTGRES_USER: biar
+      POSTGRES_PASSWORD: biar_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: biar-backend
+    container_name: biar-back
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/biar
+      SPRING_DATASOURCE_USERNAME: biar
+      SPRING_DATASOURCE_PASSWORD: biar_dev
+      SPRING_PROFILES_ACTIVE: dev
+      JWT_SECRET: biar-dev-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
