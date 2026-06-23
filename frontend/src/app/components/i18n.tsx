@@ -50,6 +50,25 @@ const dict: Dict = {
   "login.password": { en: "Password", es: "Contraseña" },
   "login.signin": { en: "Sign in", es: "Iniciar sesión" },
   "login.forgot": { en: "Forgot password?", es: "¿Olvidaste tu contraseña?" },
+  "login.noAccount": { en: "Don't have an account?", es: "¿No tienes una cuenta?" },
+  "login.signupLink": { en: "Sign up", es: "Regístrate" },
+
+  // Sign up
+  "signup.title": { en: "Create your account", es: "Crea tu cuenta" },
+  "signup.subtitle": { en: "Set up your BIA-R workspace in less than a minute.", es: "Configura tu espacio BIA-R en menos de un minuto." },
+  "signup.name": { en: "Name", es: "Nombre" },
+  "signup.lastName": { en: "Last name", es: "Apellido" },
+  "signup.confirm": { en: "Confirm password", es: "Confirmar contraseña" },
+  "signup.org": { en: "Organization", es: "Organización" },
+  "signup.terms": { en: "I accept the terms and privacy policy.", es: "Acepto los términos y la política de privacidad." },
+  "signup.submit": { en: "Create account", es: "Crear cuenta" },
+  "signup.hasAccount": { en: "Already have an account?", es: "¿Ya tienes una cuenta?" },
+  "signup.signinLink": { en: "Sign in", es: "Inicia sesión" },
+
+  // Errors
+  "error.generic": { en: "An unexpected error occurred", es: "Ocurrió un error inesperado" },
+  "error.invalidCredentials": { en: "Invalid email or password", es: "Email o contraseña inválidos" },
+  "error.emailTaken": { en: "This email is already registered", es: "Este email ya está registrado" },
 
   // Common buttons
   "btn.save": { en: "Save analysis", es: "Guardar análisis" },

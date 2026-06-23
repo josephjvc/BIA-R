@@ -1,14 +1,7 @@
-FROM maven:3.9-eclipse-temurin-21 AS builder
-WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
-COPY src ./src
-RUN mvn package -DskipTests -B
-
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S biar && adduser -S biar -G biar
 WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+COPY target/*.jar app.jar
 RUN chown -R biar:biar /app
 USER biar
 EXPOSE 8080

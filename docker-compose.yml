@@ -1,4 +1,4 @@
-name: biar-back-db
+name: biar-project
 
 services:
   postgres:
@@ -47,6 +47,8 @@ services:
 
   frontend:
     build: ./frontend
+    image: biar-front
+    container_name: biar-front
     ports:
       - "3000:80"
     depends_on:
