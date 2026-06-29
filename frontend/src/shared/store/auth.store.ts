@@ -9,13 +9,23 @@ interface AuthState {
   isAuthenticated: boolean;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
-  hydrate: () => void;
+}
+
+function loadFromStorage(): { token: string | null; user: User | null; isAuthenticated: boolean } {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const { token, user } = JSON.parse(stored);
+      if (token && user) return { token, user, isAuthenticated: true };
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  return { token: null, user: null, isAuthenticated: false };
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
+  ...loadFromStorage(),
 
   setAuth: (token, user) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ token, user }));
@@ -25,19 +35,5 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem(STORAGE_KEY);
     set({ token: null, user: null, isAuthenticated: false });
-  },
-
-  hydrate: () => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const { token, user } = JSON.parse(stored);
-        if (token && user) {
-          set({ token, user, isAuthenticated: true });
-        }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
   },
 }));
