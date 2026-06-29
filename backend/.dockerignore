@@ -1,7 +1,6 @@
-.mvn
-mvnw
-mvnw.cmd
 HELP.md
 .gitattributes
 .gitignore
 .git
+node_modules/
+
