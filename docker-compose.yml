@@ -4,10 +4,11 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: biar-database
+    restart: unless-stopped
     environment:
       POSTGRES_DB: biar
       POSTGRES_USER: biar
-      POSTGRES_PASSWORD: biar_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -17,42 +18,62 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   backend:
     image: biar-backend
     container_name: biar-back
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/biar
       SPRING_DATASOURCE_USERNAME: biar
-      SPRING_DATASOURCE_PASSWORD: biar_dev
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_PROFILES_ACTIVE: dev
-      JWT_SECRET: BVc0W2rZ4sxWxKJKuG4EgG50LGRDHkSSb3mcoU+o9zk=
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:9.2
     container_name: biar-pgadmin
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@biar.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - "5050:80"
     depends_on:
       - postgres
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   frontend:
     build: ./frontend
     image: biar-front
     container_name: biar-front
+    restart: unless-stopped
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   postgres_data:
