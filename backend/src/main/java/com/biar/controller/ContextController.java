@@ -4,6 +4,8 @@ import com.biar.dto.context.*;
 import com.biar.entity.User;
 import com.biar.security.CurrentUser;
 import com.biar.service.ContextService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/instances/{instanceId}/processes")
+@Tag(name = "Context", description = "Organizational context - processes and activities")
 public class ContextController {
 
     private final ContextService contextService;
@@ -23,11 +26,13 @@ public class ContextController {
     }
 
     @GetMapping
+    @Operation(summary = "List processes for an instance")
     public ResponseEntity<List<BusinessProcessDto>> getProcesses(@PathVariable UUID instanceId) {
         return ResponseEntity.ok(contextService.getProcesses(instanceId));
     }
 
     @PostMapping
+    @Operation(summary = "Create a process")
     public ResponseEntity<BusinessProcessDto> createProcess(@PathVariable UUID instanceId,
                                                              @Valid @RequestBody CreateProcessRequest req,
                                                              @CurrentUser User user) {

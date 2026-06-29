@@ -3,8 +3,10 @@ package com.biar.exception;
 import com.biar.dto.auth.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +25,19 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toList());
         ErrorResponse res = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation failed", errors);
         return ResponseEntity.badRequest().body(res);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException ex) {
+        ErrorResponse res = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Invalid request body");
+        return ResponseEntity.badRequest().body(res);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation", ex);
+        ErrorResponse res = new ErrorResponse(HttpStatus.CONFLICT.value(), "A database constraint was violated");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(res);
     }
 
     @ExceptionHandler(DuplicateEmailException.class)

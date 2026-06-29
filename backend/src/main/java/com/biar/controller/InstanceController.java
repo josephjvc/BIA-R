@@ -6,6 +6,8 @@ import com.biar.entity.InstanceStatusHistory;
 import com.biar.entity.User;
 import com.biar.security.CurrentUser;
 import com.biar.service.InstanceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/instances")
+@Tag(name = "Instances", description = "Continuity instance management")
 public class InstanceController {
 
     private final InstanceService instanceService;
@@ -25,11 +28,13 @@ public class InstanceController {
     }
 
     @GetMapping
+    @Operation(summary = "List instances for current user")
     public ResponseEntity<List<InstanceSummaryDto>> getInstances(@CurrentUser User user) {
         return ResponseEntity.ok(instanceService.getInstances(user.getId()));
     }
 
     @PostMapping
+    @Operation(summary = "Create a new instance")
     public ResponseEntity<InstanceDto> createInstance(@Valid @RequestBody CreateInstanceRequest req,
                                                        @CurrentUser User user) {
         return ResponseEntity.status(HttpStatus.CREATED)
