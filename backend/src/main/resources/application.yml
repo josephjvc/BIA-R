@@ -30,7 +30,7 @@ server:
   port: 8080
 
 jwt:
-  secret: biar-dev-secret-key-change-in-production
+  secret: BVc0W2rZ4sxWxKJKuG4EgG50LGRDHkSSb3mcoU+o9zk=
   expiration: 86400000
 
 logging:

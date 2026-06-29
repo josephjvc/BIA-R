@@ -29,7 +29,7 @@ services:
       SPRING_DATASOURCE_USERNAME: biar
       SPRING_DATASOURCE_PASSWORD: biar_dev
       SPRING_PROFILES_ACTIVE: dev
-      JWT_SECRET: biar-dev-secret-key-change-in-production
+      JWT_SECRET: BVc0W2rZ4sxWxKJKuG4EgG50LGRDHkSSb3mcoU+o9zk=
     depends_on:
       postgres:
         condition: service_healthy

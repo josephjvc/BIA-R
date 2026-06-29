@@ -321,3 +321,31 @@ These are NOT part of the MVP. Keep infrastructure simple.
 8. **MVP infrastructure only** — no Redis, PgBouncer, K8s until explicitly needed
 9. **Comments, exports, viewing history, filters must NOT change instance status**
 10. **Critical edits must reset status to IN_PROGRESS**
+
+---
+
+## Available Skills
+
+Skills are specialized instruction files located in `.agents/skills/`. Load the relevant skill(s) at the start of any task that matches its domain.
+
+| Skill | File | When to Load |
+|-------|------|-------------|
+| **java-springboot** | `.agents/skills/java-springboot/SKILL.md` | Any backend work: new entities, services, controllers, DTOs, repositories, tests |
+| **jwt-security** | `.agents/skills/jwt-security/SKILL.md` | Any auth/token work: JWT generation, validation, refresh, storage, security review |
+| **frontend-design** | `.agents/skills/frontend-design/SKILL.md` | New UI components, visual design decisions, layout, typography, component styling |
+| **find-skills** | `.agents/skills/find-skills/SKILL.md` | When the user asks "is there a skill that can…" or wants to extend capabilities |
+| **customize-opencode** | Built-in | Only when editing opencode's own configuration files |
+
+### Skill Usage Flow
+
+1. **Planning phase** — Load the relevant skill(s) before designing the plan. The skill's guidance may influence architectural decisions, naming conventions, and implementation patterns.
+2. **Implementation phase** — Keep the skill loaded during coding to reference patterns, validation rules, security constraints, and style guidance.
+3. **Review phase** — Cross-check the implementation against the skill's checklists (e.g., validation checklist from JWT security, testing patterns from Spring Boot).
+
+### Skill Integration Rules for AI Agents
+
+1. **Load before planning** — Always load the relevant skill(s) at the start of a new feature or domain task, before writing any code or plan.
+2. **One skill per domain** — Load only skills relevant to the current task. For full-stack work, load both frontend and backend skills as needed.
+3. **Follow > override** — Skill guidance takes precedence over generic patterns. If a skill recommends a specific approach (e.g., `@ControllerAdvice` for error handling, RS256 over HS256), follow it unless the existing codebase has an established incompatible pattern.
+4. **Respect existing conventions** — If the existing codebase diverges from skill recommendations (e.g., package-by-layer vs package-by-feature), note the divergence in the plan and follow the existing convention to maintain consistency.
+5. **Reference in plans** — When presenting a plan, note which skills were consulted so the reviewer knows what standards were considered.

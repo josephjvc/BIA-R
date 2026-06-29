@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import {
   LayoutDashboard, Building2, FileBarChart, ShieldAlert, Share2, FileText,
   Sparkles, ArrowLeftRight, ChevronDown, FilePen, Plus, CheckCircle2,
@@ -6,8 +7,11 @@ import {
   ArchiveRestore, ClipboardCheck, ClipboardSignature, XCircle, Lock,
 } from "lucide-react";
 import { t, useLang } from "./i18n";
-import type { ActiveInstance, Status } from "./Instances";
+import { useInstanceStore } from "../../shared/store/instance.store";
+import { useSidebarStore } from "../../shared/store/sidebar.store";
 import { statusMeta } from "./Instances";
+import type { InstanceStatus } from "../../shared/types/instance";
+import { useUpdateStatus, useArchiveInstance, useDuplicateInstance, useActivityLog } from "../../shared/queries/instances.queries";
 
 export type Screen = "dashboard" | "context" | "bia" | "risks" | "integrated" | "reports";
 
@@ -20,47 +24,63 @@ const items: { id: Screen; key: string; icon: any }[] = [
   { id: "reports", key: "nav.reports", icon: FileText },
 ];
 
+function formatDateShort(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 type Change = { icon: any; action: string; author: string; date: string };
-type Comment = { initials: string; preview: string; author: string; date: string; tint: string };
 
-const recentChanges: Change[] = [
-  { icon: FilePen, action: "Updated BIA Framework", author: "Mike Torres", date: "Apr 14" },
-  { icon: Plus, action: "Added dependency section", author: "Laura Pérez", date: "Apr 12" },
-  { icon: CheckCircle2, action: "Changed status to Reviewed", author: "Camila Vargas", date: "Apr 10" },
-];
-
-const allChanges: Change[] = [
-  ...recentChanges,
-  { icon: FilePen, action: "Edited risk matrix thresholds", author: "Mike Torres", date: "Apr 09" },
-  { icon: Plus, action: "Added 3 critical processes", author: "Laura Pérez", date: "Apr 07" },
-  { icon: CheckCircle2, action: "Approved Q1 report", author: "Camila Vargas", date: "Apr 05" },
-  { icon: FilePen, action: "Updated organizational context", author: "D. Romero", date: "Apr 03" },
-];
-
-const latestComments: Comment[] = [
-  { initials: "CV", preview: "Final version reviewed for Q1…", author: "Camila Vargas", date: "Apr 14", tint: "from-[#1E63D9] to-[#0A2540]" },
-  { initials: "DR", preview: "Please confirm supplier dependency…", author: "D. Romero", date: "Apr 13", tint: "from-emerald-500 to-emerald-700" },
-  { initials: "MT", preview: "Risk matrix updated with new values…", author: "Mike Torres", date: "Apr 11", tint: "from-amber-500 to-rose-500" },
-];
-
-const allComments: Comment[] = [
-  ...latestComments,
-  { initials: "LP", preview: "Added the new logistics dependency to the chain map.", author: "Laura Pérez", date: "Apr 10", tint: "from-violet-500 to-indigo-600" },
-  { initials: "CV", preview: "Reviewer approval pending for the BIA framework.", author: "Camila Vargas", date: "Apr 08", tint: "from-[#1E63D9] to-[#0A2540]" },
-];
-
-export function Sidebar({
-  current,
-  onNavigate,
-  instance,
-  onSwitchInstance,
-}: {
-  current: Screen;
-  onNavigate: (s: Screen) => void;
-  instance: ActiveInstance;
-  onSwitchInstance: () => void;
-}) {
+export function Sidebar() {
+  const navigate = useNavigate();
+  const { instanceId } = useParams();
+  const activeInstance = useInstanceStore((s) => s.activeInstance);
+  const setMobileNavOpen = useSidebarStore((s) => s.setMobileNavOpen);
   useLang();
+
+  const pathParts = window.location.pathname.split("/");
+  const current = (pathParts[pathParts.length - 1] || "dashboard") as Screen;
+
+  const instance = {
+    name: activeInstance?.name || "",
+    org: activeInstance?.org || "",
+    version: activeInstance?.version || "",
+    status: (activeInstance?.status || "in_progress") as InstanceStatus,
+  };
+
+  const onNavigate = (screen: Screen) => {
+    navigate(`/instances/${instanceId}/${screen}`);
+    setMobileNavOpen(false);
+  };
+
+  const onSwitchInstance = () => {
+    useInstanceStore.getState().clearActiveInstance();
+    navigate("/instances");
+  };
+
+  const { data: activityLog = [] } = useActivityLog(instanceId);
+
+  const recentChanges: Change[] = activityLog.slice(0, 5).map(e => {
+    const icon = e.action.includes("STATUS") ? CheckCircle2 : e.action.includes("CREATED") ? Plus : FilePen;
+    return {
+      icon,
+      action: e.action.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+      author: e.user?.displayName || "System",
+      date: formatDateShort(e.createdAt),
+    };
+  });
+
+  const allChanges: Change[] = activityLog.map(e => {
+    const icon = e.action.includes("STATUS") ? CheckCircle2 : e.action.includes("CREATED") ? Plus : FilePen;
+    return {
+      icon,
+      action: e.action.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+      author: e.user?.displayName || "System",
+      date: formatDateShort(e.createdAt),
+    };
+  });
+
   const [changesOpen, setChangesOpen] = useState(true);
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [drawer, setDrawer] = useState<null | "changes" | "comments">(null);
@@ -173,36 +193,13 @@ export function Sidebar({
         <div className="mx-3 mt-3 pt-3 border-t border-black/5">
           <AccordionHeader
             title="Latest comments"
-            count={latestComments.length}
+            count={0}
             open={commentsOpen}
             onToggle={() => setCommentsOpen((v) => !v)}
           />
           {commentsOpen && (
             <div className="mt-1">
-              {latestComments.length === 0 ? (
-                <EmptyLine text="No comments yet" />
-              ) : (
-                <ul className="divide-y divide-black/5">
-                  {latestComments.map((c, i) => (
-                    <li key={i} className="py-1.5 flex items-start gap-2">
-                      <div className={`mt-0.5 size-5 rounded-full bg-gradient-to-br ${c.tint} text-white flex items-center justify-center shrink-0`} style={{ fontSize: 9, fontWeight: 600 }}>
-                        {c.initials}
-                      </div>
-                      <div className="min-w-0 flex-1 leading-tight">
-                        <div className="truncate" style={{ fontSize: 12, color: "#0A2540" }}>{c.preview}</div>
-                        <div className="truncate" style={{ fontSize: 10.5, color: "#94A3B8" }}>{c.author} · {c.date}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                onClick={() => setDrawer("comments")}
-                className="mt-1 hover:underline"
-                style={{ fontSize: 11, color: "#1E63D9", fontWeight: 500 }}
-              >
-                View all comments →
-              </button>
+              <EmptyLine text="Comments coming soon" />
             </div>
           )}
         </div>
@@ -217,6 +214,7 @@ export function Sidebar({
       {drawer && (
         <ActivityDrawer
           kind={drawer}
+          changes={allChanges}
           onClose={() => setDrawer(null)}
         />
       )}
@@ -224,7 +222,7 @@ export function Sidebar({
   );
 }
 
-function MiniStatusChip({ s }: { s: Status }) {
+function MiniStatusChip({ s }: { s: InstanceStatus }) {
   const m = statusMeta[s];
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${m.tone}`} style={{ fontSize: 10, fontWeight: 500 }}>
@@ -233,16 +231,16 @@ function MiniStatusChip({ s }: { s: Status }) {
   );
 }
 
-function WorkflowStepper({ status }: { status: Status }) {
+function WorkflowStepper({ status }: { status: InstanceStatus }) {
   // Compact horizontal stepper: In progress → Completed → Reviewed → Approved/Disapproved → Finished
-  const steps: { key: Status | "approval"; label: string }[] = [
+  const steps: { key: InstanceStatus | "approval"; label: string }[] = [
     { key: "in_progress", label: "In progress" },
     { key: "completed", label: "Completed" },
     { key: "reviewed", label: "Reviewed" },
     { key: "approval", label: status === "disapproved" ? "Disapproved" : "Approved" },
     { key: "finished", label: "Finished" },
   ];
-  const order: Status[] = ["in_progress", "completed", "reviewed", "approved", "finished"];
+  const order: InstanceStatus[] = ["in_progress", "completed", "reviewed", "approved", "finished"];
   const currentIdx = status === "disapproved" ? 3 : status === "archived" ? 4 : order.indexOf(status);
 
   const dotColor = (i: number) => {
@@ -281,8 +279,17 @@ function HelperLine({ tone, icon: Ic, text }: { tone: "warning" | "info"; icon: 
   );
 }
 
-type Btn = { label: string; icon: any; primary?: boolean };
-function InstanceActions({ status }: { status: Status }) {
+type Btn = { label: string; icon: any; primary?: boolean; action?: () => void };
+function InstanceActions({ status }: { status: InstanceStatus }) {
+  const { instanceId } = useParams();
+  const updateStatus = useUpdateStatus();
+  const archiveInstance = useArchiveInstance();
+  const duplicateInstance = useDuplicateInstance();
+
+  const act = (action: string) => {
+    if (instanceId) updateStatus.mutate({ id: instanceId, data: { action } });
+  };
+
   let helper: string | null = null;
   let btns: Btn[] = [];
 
@@ -291,31 +298,31 @@ function InstanceActions({ status }: { status: Status }) {
       helper = "Complete all required sections to enable review.";
       break;
     case "completed":
-      btns = [{ label: "Mark as reviewed", icon: ClipboardCheck, primary: true }];
+      btns = [{ label: "Mark as reviewed", icon: ClipboardCheck, primary: true, action: () => act("review") }];
       break;
     case "reviewed":
       btns = [
-        { label: "Mark as approved", icon: ClipboardCheck, primary: true },
-        { label: "Mark as disapproved", icon: XCircle },
+        { label: "Mark as approved", icon: ClipboardCheck, primary: true, action: () => act("approve") },
+        { label: "Mark as disapproved", icon: XCircle, action: () => act("disapprove") },
       ];
       break;
     case "approved":
-      btns = [{ label: "Finish instance", icon: Lock, primary: true }];
+      btns = [{ label: "Finish instance", icon: Lock, primary: true, action: () => act("finish") }];
       break;
     case "disapproved":
       helper = "Update the required sections to continue.";
       break;
     case "finished":
       btns = [
-        { label: "Duplicate for new period", icon: Sparkles, primary: true },
-        { label: "Archive", icon: Archive },
+        { label: "Duplicate for new period", icon: Sparkles, primary: true, action: () => { if (instanceId) duplicateInstance.mutate(instanceId); } },
+        { label: "Archive", icon: Archive, action: () => { if (instanceId) archiveInstance.mutate({ id: instanceId }); } },
         { label: "Export PDF", icon: FileDown },
         { label: "Export history PDF", icon: ScrollText },
       ];
       break;
     case "archived":
       btns = [
-        { label: "Restore", icon: ArchiveRestore, primary: true },
+        { label: "Restore", icon: ArchiveRestore, primary: true, action: () => act("restore") },
         { label: "Export PDF", icon: FileDown },
         { label: "Export history PDF", icon: ScrollText },
       ];
@@ -337,6 +344,7 @@ function InstanceActions({ status }: { status: Status }) {
           return b.primary ? (
             <button
               key={i}
+              onClick={b.action}
               className="w-full h-8 px-2.5 rounded-lg bg-[#0A2540] hover:bg-[#0F3057] text-white flex items-center gap-1.5 transition shadow-[0_6px_18px_-10px_rgba(10,37,64,0.5)]"
               style={{ fontSize: 12, fontWeight: 500 }}
             >
@@ -345,6 +353,7 @@ function InstanceActions({ status }: { status: Status }) {
           ) : (
             <button
               key={i}
+              onClick={b.action}
               className="w-full h-8 px-2.5 rounded-lg bg-white hover:bg-slate-50 border border-black/10 text-[#0A2540] flex items-center gap-1.5 transition"
               style={{ fontSize: 12, fontWeight: 450 }}
             >
@@ -382,7 +391,7 @@ function EmptyLine({ text }: { text: string }) {
   );
 }
 
-function ActivityDrawer({ kind, onClose }: { kind: "changes" | "comments"; onClose: () => void }) {
+function ActivityDrawer({ kind, changes, onClose }: { kind: "changes" | "comments"; changes: Change[]; onClose: () => void }) {
   const isChanges = kind === "changes";
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -410,7 +419,7 @@ function ActivityDrawer({ kind, onClose }: { kind: "changes" | "comments"; onClo
         <div className="p-6">
           {isChanges ? (
             <ul className="space-y-3">
-              {allChanges.map((c, i) => {
+              {changes.map((c, i) => {
                 const Ic = c.icon;
                 return (
                   <li key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50">
@@ -426,22 +435,9 @@ function ActivityDrawer({ kind, onClose }: { kind: "changes" | "comments"; onClo
               })}
             </ul>
           ) : (
-            <ul className="space-y-3">
-              {allComments.map((c, i) => (
-                <li key={i} className="p-3.5 rounded-xl border border-black/5 bg-slate-50/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`size-8 rounded-full bg-gradient-to-br ${c.tint} text-white flex items-center justify-center`} style={{ fontSize: 11, fontWeight: 600 }}>
-                      {c.initials}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{c.author}</div>
-                      <div style={{ fontSize: 11, color: "#94A3B8" }}>{c.date}</div>
-                    </div>
-                  </div>
-                  <div className="mt-2.5" style={{ fontSize: 13, color: "#475569", lineHeight: 1.55 }}>{c.preview}</div>
-                </li>
-              ))}
-            </ul>
+            <div className="p-4 text-center" style={{ fontSize: 13, color: "#94A3B8" }}>
+              Comments will be available in a future update.
+            </div>
           )}
         </div>
       </div>

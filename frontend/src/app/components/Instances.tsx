@@ -1,18 +1,38 @@
 import { useState, useEffect, ReactNode, useMemo, useRef } from "react";
+import { useNavigate } from "react-router";
 import {
   Plus, Calendar, ChevronDown, MoreHorizontal, FolderOpen, Pencil, FileDown,
-  ScrollText, Archive, X, ArchiveRestore, MessageSquare, Trash2, ShieldOff, Check,
+  ScrollText, Archive, X, ArchiveRestore, MessageSquare, Trash2, Check,
   ClipboardList, ClipboardCheck, ClipboardSignature, CheckCircle2, AlertCircle, Filter,
   HelpCircle, Building2, FileBarChart, Share2, ShieldAlert, FileText, ArrowRight, Inbox, Sparkles
 } from "lucide-react";
 import { Card, PrimaryButton, SecondaryButton } from "./shared";
 import { useSearch, setSearchContext } from "./searchStore";
+import { useInstanceStore } from "../../shared/store/instance.store";
+import {
+  useInstances, useCreateInstance, useUpdateInstance, useDuplicateInstance,
+  useActivityLog, useParticipants,
+} from "../../shared/queries/instances.queries";
+import { useInstance } from "../../shared/queries/instances.queries";
+import type { InstanceSummary, InstanceStatus } from "../../shared/types/instance";
 
 // ───────────────────────── types & helpers
-export type Status = "in_progress" | "completed" | "reviewed" | "approved" | "disapproved" | "finished" | "archived";
-export type ActiveInstance = { id: string; name: string; org: string; version: string; status: Status };
+type SectionKey = "dept" | "bia" | "dep" | "risk" | "rep";
+type SectionStatus = "complete" | "in_progress" | "not_started";
 
-export const statusMeta: Record<Status, { label: string; tone: string; dot: string }> = {
+const sectionIcons: Record<SectionKey, React.ElementType> = {
+  dept: Building2, bia: FileBarChart, dep: Share2, risk: ShieldAlert, rep: FileText,
+};
+const sectionLabel: Record<SectionKey, string> = {
+  dept: "Organizational Context", bia: "BIA", dep: "Dependencies", risk: "Risk", rep: "Reports",
+};
+const sectionShort: Record<SectionKey, string> = {
+  dept: "Context", bia: "BIA", dep: "Dep.", risk: "Risk", rep: "Reports",
+};
+
+const sectionKeys: SectionKey[] = ["dept", "bia", "dep", "risk", "rep"];
+
+export const statusMeta: Record<InstanceStatus, { label: string; tone: string; dot: string }> = {
   in_progress: { label: "In progress", tone: "bg-blue-50 text-blue-700", dot: "bg-blue-500" },
   completed: { label: "Completed", tone: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
   reviewed: { label: "Reviewed", tone: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
@@ -22,7 +42,45 @@ export const statusMeta: Record<Status, { label: string; tone: string; dot: stri
   archived: { label: "Archived", tone: "bg-slate-100 text-slate-600", dot: "bg-slate-400" },
 };
 
-export function StatusChip({ s }: { s: Status }) {
+function getSectionStatus(inst: InstanceSummary, key: SectionKey): { status: SectionStatus; tooltip: string } {
+  switch (key) {
+    case "dept":
+      if (inst.processCount === 0) return { status: "not_started", tooltip: "No processes yet" };
+      if (inst.activityCount > 0) return { status: "complete", tooltip: `${inst.processCount} processes · ${inst.activityCount} activities` };
+      return { status: "in_progress", tooltip: `${inst.processCount} processes` };
+    case "bia":
+      if (inst.processCount === 0) return { status: "not_started", tooltip: "No processes to assess" };
+      if (inst.biaAssessmentCount === 0) return { status: "not_started", tooltip: "No assessments yet" };
+      if (inst.biaAssessmentCount < inst.processCount) return { status: "in_progress", tooltip: `${inst.biaAssessmentCount}/${inst.processCount} processes assessed` };
+      return { status: "complete", tooltip: `${inst.processCount}/${inst.processCount} processes assessed` };
+    case "dep":
+      return { status: "not_started", tooltip: "Not available" };
+    case "risk":
+      if (inst.riskCount === 0) return { status: "not_started", tooltip: "No risks identified" };
+      return { status: "complete", tooltip: `${inst.riskCount} risks identified` };
+    case "rep":
+      if (inst.reportCount === 0) return { status: "not_started", tooltip: "None generated" };
+      return { status: "complete", tooltip: `${inst.reportCount} reports generated` };
+  }
+}
+
+function computeProgress(inst: InstanceSummary): number {
+  const done = sectionKeys.filter(k => getSectionStatus(inst, k).status === "complete").length;
+  const partial = sectionKeys.filter(k => getSectionStatus(inst, k).status === "in_progress").length;
+  return Math.round((done * 100 + partial * 50) / sectionKeys.length);
+}
+
+function initials(name: string): string {
+  return name.split(" ").map(w => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
+}
+
+function formatDate(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export function StatusChip({ s }: { s: InstanceStatus }) {
   const m = statusMeta[s];
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${m.tone}`} style={{ fontSize: 11, fontWeight: 500 }}>
@@ -53,188 +111,27 @@ function Tip({ text, children, className = "" }: { text: string; children: React
   );
 }
 
-// ───────────────────────── data
-type Participant = { name: string; email: string; role: "Author" | "Responsible" | "Reviewer" | "Approver"; initials: string; color: string };
-type Instance = {
-  id: string; name: string; org: string; version: string; status: Status;
-  owner: string; ownerInitials: string; lastDate: string; lastBy: string; progress: number;
-  country: string; industry: string; description: string; created: string;
-  sections: { key: "dept" | "bia" | "dep" | "risk" | "rep"; name: string; pct: number }[];
-  participants: Participant[];
-  comments: { author: string; date: string; msg: string; initials: string }[];
-  activity: { author: string; date: string; action: string; note?: string }[];
-};
-
-const sectionIcons: Record<string, any> = {
-  dept: Building2, bia: FileBarChart, dep: Share2, risk: ShieldAlert, rep: FileText,
-};
-const sectionLabel: Record<string, string> = {
-  dept: "Department", bia: "BIA", dep: "Dependencies", risk: "Risk", rep: "Reports",
-};
-
-const seedInstances: Instance[] = [
-  {
-    id: "i1", name: "Q1 2026 Continuity Analysis", org: "Bebidas Perú S.A.", version: "v1.0",
-    status: "in_progress", owner: "Camila Vargas", ownerInitials: "CV", lastDate: "Apr 14, 2026", lastBy: "Mike Torres", progress: 68,
-    country: "Peru", industry: "Consumer Goods · Beverages",
-    description: "Quarterly continuity review for distribution and cold-chain operations across Lima and Callao.",
-    created: "Jan 10, 2026",
-    sections: [
-      { key: "dept", name: "Organizational Context", pct: 100 },
-      { key: "bia", name: "BIA Framework", pct: 85 },
-      { key: "dep", name: "Dependencies", pct: 70 },
-      { key: "risk", name: "Risk Assessment", pct: 55 },
-      { key: "rep", name: "Reports", pct: 30 },
-    ],
-    participants: [
-      { name: "Camila Vargas", email: "camila.vargas@bia-r.pe", role: "Author", initials: "CV", color: "from-[#1E63D9] to-[#0A2540]" },
-      { name: "Mike Torres", email: "mike.torres@bia-r.pe", role: "Responsible", initials: "MT", color: "from-emerald-500 to-emerald-700" },
-      { name: "Laura Pérez", email: "laura.perez@bia-r.pe", role: "Reviewer", initials: "LP", color: "from-amber-500 to-amber-700" },
-      { name: "Diego Ramos", email: "diego.ramos@bia-r.pe", role: "Approver", initials: "DR", color: "from-violet-500 to-violet-700" },
-    ],
-    comments: [
-      { author: "Mike Torres", date: "Apr 14, 2026", msg: "Updated cold-chain RTO after refrigeration audit.", initials: "MT" },
-      { author: "Camila Vargas", date: "Apr 02, 2026", msg: "Final version reviewed for Q1 continuity assessment.", initials: "CV" },
-    ],
-    activity: [
-      { author: "Mike Torres", date: "Apr 14, 2026 · 14:22", action: "Updated BIA Framework", note: "Adjusted MTPD for 3 processes." },
-      { author: "Mike Torres", date: "Apr 12, 2026 · 09:10", action: "Added dependency section" },
-      { author: "Laura Pérez", date: "Apr 08, 2026 · 16:45", action: "Commented" },
-      { author: "Camila Vargas", date: "Apr 02, 2026 · 11:30", action: "Updated Instance Description" },
-      { author: "Camila Vargas", date: "Jan 10, 2026 · 08:00", action: "Created instance", note: "Initial scope for Q1 2026." },
-    ],
-  },
-  {
-    id: "i2", name: "Distribution BIA Review", org: "Bebidas Perú S.A.", version: "v2.0",
-    status: "reviewed", owner: "D. Romero", ownerInitials: "DR", lastDate: "Apr 02, 2026", lastBy: "Laura Pérez", progress: 84,
-    country: "Peru", industry: "Consumer Goods · Beverages",
-    description: "Deep review of distribution BIA after the Q4 incident report.", created: "Feb 18, 2026",
-    sections: [
-      { key: "dept", name: "Organizational Context", pct: 100 },
-      { key: "bia", name: "BIA Framework", pct: 100 },
-      { key: "dep", name: "Dependencies", pct: 90 },
-      { key: "risk", name: "Risk Assessment", pct: 80 },
-      { key: "rep", name: "Reports", pct: 50 },
-    ],
-    participants: [
-      { name: "D. Romero", email: "d.romero@bia-r.pe", role: "Author", initials: "DR", color: "from-[#1E63D9] to-[#0A2540]" },
-      { name: "Laura Pérez", email: "laura.perez@bia-r.pe", role: "Reviewer", initials: "LP", color: "from-amber-500 to-amber-700" },
-    ],
-    comments: [{ author: "Laura Pérez", date: "Apr 02, 2026", msg: "Approved for next-stage executive review.", initials: "LP" }],
-    activity: [
-      { author: "Laura Pérez", date: "Apr 02, 2026", action: "Marked as reviewed" },
-      { author: "D. Romero", date: "Mar 22, 2026", action: "Updated Risk Assessment" },
-      { author: "D. Romero", date: "Feb 18, 2026", action: "Created instance" },
-    ],
-  },
-  {
-    id: "i3", name: "Risk Assessment 2026", org: "Bebidas Perú S.A.", version: "v1.3",
-    status: "approved", owner: "M. Quispe", ownerInitials: "MQ", lastDate: "Mar 28, 2026", lastBy: "Camila Vargas", progress: 100,
-    country: "Peru", industry: "Consumer Goods · Beverages",
-    description: "Annual enterprise risk assessment.", created: "Jan 20, 2026",
-    sections: [
-      { key: "dept", name: "Organizational Context", pct: 100 },
-      { key: "bia", name: "BIA Framework", pct: 100 },
-      { key: "dep", name: "Dependencies", pct: 100 },
-      { key: "risk", name: "Risk Assessment", pct: 100 },
-      { key: "rep", name: "Reports", pct: 100 },
-    ],
-    participants: [
-      { name: "M. Quispe", email: "m.quispe@bia-r.pe", role: "Author", initials: "MQ", color: "from-[#1E63D9] to-[#0A2540]" },
-      { name: "Camila Vargas", email: "camila.vargas@bia-r.pe", role: "Approver", initials: "CV", color: "from-violet-500 to-violet-700" },
-    ],
-    comments: [],
-    activity: [
-      { author: "Camila Vargas", date: "Mar 28, 2026", action: "Marked as approved" },
-      { author: "M. Quispe", date: "Mar 10, 2026", action: "Exported summary PDF" },
-      { author: "M. Quispe", date: "Jan 20, 2026", action: "Created instance" },
-    ],
-  },
-  {
-    id: "i5", name: "Plant Operations Continuity", org: "Bebidas Perú S.A.", version: "v1.2",
-    status: "disapproved", owner: "Laura Pérez", ownerInitials: "LP", lastDate: "Apr 09, 2026", lastBy: "Diego Ramos", progress: 92,
-    country: "Peru", industry: "Consumer Goods · Beverages",
-    description: "Plant-level continuity plan covering production lines and packaging.", created: "Feb 02, 2026",
-    sections: [
-      { key: "dept", name: "Organizational Context", pct: 100 },
-      { key: "bia", name: "BIA Framework", pct: 100 },
-      { key: "dep", name: "Dependencies", pct: 90 },
-      { key: "risk", name: "Risk Assessment", pct: 85 },
-      { key: "rep", name: "Reports", pct: 85 },
-    ],
-    participants: [
-      { name: "Laura Pérez", email: "laura.perez@bia-r.pe", role: "Author", initials: "LP", color: "from-[#1E63D9] to-[#0A2540]" },
-      { name: "Diego Ramos", email: "diego.ramos@bia-r.pe", role: "Approver", initials: "DR", color: "from-violet-500 to-violet-700" },
-    ],
-    comments: [{ author: "Diego Ramos", date: "Apr 09, 2026", msg: "MTPD values for line 3 need revision before approval.", initials: "DR" }],
-    activity: [
-      { author: "Diego Ramos", date: "Apr 09, 2026", action: "Marked as disapproved", note: "MTPD on line 3 inconsistent with audit." },
-      { author: "Laura Pérez", date: "Apr 06, 2026", action: "Marked as reviewed" },
-      { author: "Laura Pérez", date: "Feb 02, 2026", action: "Created instance" },
-    ],
-  },
-  {
-    id: "i6", name: "Q4 2025 Continuity Closeout", org: "Bebidas Perú S.A.", version: "v1.0",
-    status: "finished", owner: "Diego Ramos", ownerInitials: "DR", lastDate: "Jan 31, 2026", lastBy: "System", progress: 100,
-    country: "Peru", industry: "Consumer Goods · Beverages",
-    description: "Closed Q4 2025 continuity analysis. Ready to duplicate for the new period.", created: "Oct 05, 2025",
-    sections: [
-      { key: "dept", name: "Organizational Context", pct: 100 },
-      { key: "bia", name: "BIA Framework", pct: 100 },
-      { key: "dep", name: "Dependencies", pct: 100 },
-      { key: "risk", name: "Risk Assessment", pct: 100 },
-      { key: "rep", name: "Reports", pct: 100 },
-    ],
-    participants: [
-      { name: "Diego Ramos", email: "diego.ramos@bia-r.pe", role: "Author", initials: "DR", color: "from-[#1E63D9] to-[#0A2540]" },
-      { name: "Camila Vargas", email: "camila.vargas@bia-r.pe", role: "Approver", initials: "CV", color: "from-violet-500 to-violet-700" },
-    ],
-    comments: [],
-    activity: [
-      { author: "System", date: "Jan 31, 2026", action: "Marked as Finished", note: "Closed for period Q4 2025." },
-      { author: "Camila Vargas", date: "Jan 20, 2026", action: "Marked as approved" },
-      { author: "Diego Ramos", date: "Oct 05, 2025", action: "Created instance" },
-    ],
-  },
-  {
-    id: "i4", name: "Supply Chain Continuity", org: "Bebidas Perú S.A.", version: "v1.0",
-    status: "completed", owner: "Camila Vargas", ownerInitials: "CV", lastDate: "Mar 15, 2026", lastBy: "Diego Ramos", progress: 100,
-    country: "Peru", industry: "Consumer Goods · Beverages",
-    description: "End-to-end supply chain continuity plan.", created: "Nov 04, 2025",
-    sections: [
-      { key: "dept", name: "Organizational Context", pct: 100 },
-      { key: "bia", name: "BIA Framework", pct: 100 },
-      { key: "dep", name: "Dependencies", pct: 100 },
-      { key: "risk", name: "Risk Assessment", pct: 100 },
-      { key: "rep", name: "Reports", pct: 100 },
-    ],
-    participants: [
-      { name: "Camila Vargas", email: "camila.vargas@bia-r.pe", role: "Author", initials: "CV", color: "from-[#1E63D9] to-[#0A2540]" },
-      { name: "Diego Ramos", email: "diego.ramos@bia-r.pe", role: "Responsible", initials: "DR", color: "from-emerald-500 to-emerald-700" },
-    ],
-    comments: [{ author: "Diego Ramos", date: "Mar 15, 2026", msg: "Closed out — handover to operations.", initials: "DR" }],
-    activity: [
-      { author: "Diego Ramos", date: "Mar 15, 2026", action: "Marked as completed" },
-      { author: "Camila Vargas", date: "Nov 04, 2025", action: "Created instance" },
-    ],
-  },
-];
-
-const archivedSeed = [
-  { id: "a1", name: "Cold-chain Continuity 2025", org: "Bebidas Perú S.A.", version: "v2.1", archDate: "Jan 18, 2026", archBy: "Camila Vargas", last: "completed" as Status, owner: "Camila Vargas", ownerInitials: "CV", progress: 100, terminated: false },
-  { id: "a2", name: "Q4 2025 Continuity Analysis", org: "Bebidas Perú S.A.", version: "v1.4", archDate: "Dec 30, 2025", archBy: "Diego Ramos", last: "approved" as Status, owner: "Diego Ramos", ownerInitials: "DR", progress: 98, terminated: true },
-  { id: "a3", name: "Distribution BIA — Legacy", org: "Bebidas Perú S.A.", version: "v1.0", archDate: "Nov 12, 2025", archBy: "Laura Pérez", last: "reviewed" as Status, owner: "Laura Pérez", ownerInitials: "LP", progress: 72, terminated: false },
-];
-
 // ───────────────────────── main
-export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } = {}) {
+export function Instances() {
+  const navigate = useNavigate();
+  const setActiveInstance = useInstanceStore((s) => s.setActiveInstance);
   const [tab, setTab] = useState<"active" | "archived">("active");
-  const [sel, setSel] = useState<Instance | null>(null);
+
+  const { data: instances = [], isLoading, isError, error } = useInstances();
+  const createInstance = useCreateInstance();
+  const updateInstance = useUpdateInstance();
+  const duplicateInstance = useDuplicateInstance();
+
+  const openInstance = (i: InstanceSummary) => {
+    setActiveInstance(i);
+    navigate(`/instances/${i.id}/dashboard`);
+  };
+  const [sel, setSel] = useState<InstanceSummary | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | InstanceStatus>("all");
   const [statusOpen, setStatusOpen] = useState(false);
   const query = useSearch();
 
@@ -242,34 +139,53 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
     setSearchContext(tab === "active" ? "instances:active" : "instances:archived");
   }, [tab]);
 
-  const matchesActive = (i: Instance, q: string) => {
+  const matchesQuery = (i: InstanceSummary, q: string) => {
     if (!q) return true;
     const hay = [
-      i.name, i.org, i.version, i.status, i.owner, i.lastDate, i.lastBy, i.created, i.description,
-      ...i.comments.flatMap(c => [c.author, c.msg, c.date]),
-      ...i.activity.flatMap(a => [a.author, a.action, a.note || "", a.date]),
-      `${i.progress}%`,
+      i.name, i.org, i.version, i.status, i.createdByName, i.createdAt, i.updatedAt,
     ].join(" ").toLowerCase();
     return hay.includes(q.toLowerCase());
   };
 
   const list = useMemo(
-    () => seedInstances.filter(i => (statusFilter === "all" || i.status === statusFilter) && matchesActive(i, query)),
-    [statusFilter, query]
+    () => instances
+      .filter(i => i.status !== "archived")
+      .filter(i => statusFilter === "all" || i.status === statusFilter)
+      .filter(i => matchesQuery(i, query)),
+    [instances, statusFilter, query]
   );
 
-  const archivedFiltered = useMemo(() => {
-    const q = query.toLowerCase();
-    return archivedSeed.filter(r => !q || [r.name, r.org, r.version, r.archDate, r.archBy, r.last].join(" ").toLowerCase().includes(q));
-  }, [query]);
+  const archivedList = useMemo(
+    () => instances.filter(i => i.status === "archived").filter(i => matchesQuery(i, query)),
+    [instances, query]
+  );
+
+  const kpis = useMemo(() => ({
+    active: instances.filter(i => ["in_progress", "completed"].includes(i.status)).length,
+    underReview: instances.filter(i => i.status === "reviewed").length,
+    approved: instances.filter(i => i.status === "approved").length,
+    completed: instances.filter(i => i.status === "finished").length,
+  }), [instances]);
+
+  if (isError) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-10">
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center" style={{ color: "#BE123C" }}>
+          <AlertCircle className="size-8 mx-auto mb-3" />
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Failed to load instances</div>
+          <div className="mt-1" style={{ fontSize: 13 }}>{(error as Error)?.message || "An unexpected error occurred."}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-5 sm:space-y-6">
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-black/5">
         {[
-          { id: "active", label: "Active instances", count: seedInstances.length },
-          { id: "archived", label: "Archived instances", count: archivedSeed.length },
+          { id: "active", label: "Active instances", count: instances.filter(i => i.status !== "archived").length },
+          { id: "archived", label: "Archived instances", count: instances.filter(i => i.status === "archived").length },
         ].map(x => (
           <button
             key={x.id}
@@ -294,7 +210,7 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
               <div className="flex items-center gap-2">
                 <button className="h-10 px-3.5 rounded-xl bg-slate-50 border border-black/5 hover:bg-white hover:border-black/10 flex items-center gap-2 transition">
                   <Calendar className="size-4 text-slate-500" strokeWidth={1.75} />
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>Mar 01 – Apr 30, 2026</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>All periods</span>
                   <ChevronDown className="size-3.5 text-slate-400" />
                 </button>
                 <div className="relative">
@@ -342,10 +258,10 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
           {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
             {[
-              { l: "Active", v: 12, hint: "+2 this month", icon: ClipboardList, color: "text-blue-700 bg-blue-50" },
-              { l: "Under review", v: 4, hint: "2 pending approval", icon: ClipboardSignature, color: "text-amber-700 bg-amber-50" },
-              { l: "Approved", v: 7, hint: "+1 vs last month", icon: ClipboardCheck, color: "text-violet-700 bg-violet-50" },
-              { l: "Completed", v: 18, hint: "All on schedule", icon: CheckCircle2, color: "text-emerald-700 bg-emerald-50" },
+              { l: "Active", v: kpis.active, hint: "In progress or completed", icon: ClipboardList, color: "text-blue-700 bg-blue-50" },
+              { l: "Under review", v: kpis.underReview, hint: "Pending approval", icon: ClipboardSignature, color: "text-amber-700 bg-amber-50" },
+              { l: "Approved", v: kpis.approved, hint: "Ready to finish", icon: ClipboardCheck, color: "text-violet-700 bg-violet-50" },
+              { l: "Finished", v: kpis.completed, hint: "All instances", icon: CheckCircle2, color: "text-emerald-700 bg-emerald-50" },
             ].map((k, i) => {
               const Ic = k.icon;
               return (
@@ -374,13 +290,35 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
               </Tip>
             </div>
             <div style={{ fontSize: 12, color: "#94A3B8" }}>
-              {query
-                ? `Showing ${list.length} matching ${list.length === 1 ? "instance" : "instances"}`
-                : `${list.length} active ${list.length === 1 ? "instance" : "instances"}`}
+              {isLoading
+                ? "Loading instances..."
+                : query
+                  ? `Showing ${list.length} matching ${list.length === 1 ? "instance" : "instances"}`
+                  : `${list.length} active ${list.length === 1 ? "instance" : "instances"}`}
             </div>
           </div>
 
-          {list.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5">
+              {[1, 2, 3].map(n => (
+                <div key={n} className="bg-white rounded-2xl border border-black/5 p-5 animate-pulse">
+                  <div className="h-5 w-24 bg-slate-100 rounded-full" />
+                  <div className="mt-3 h-5 w-3/4 bg-slate-100 rounded-lg" />
+                  <div className="mt-1 h-4 w-1/2 bg-slate-100 rounded-lg" />
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="size-7 rounded-full bg-slate-100" />
+                    <div className="h-4 w-1/3 bg-slate-100 rounded-lg" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="h-3 w-full bg-slate-100 rounded-full" />
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1, 2, 3, 4, 5].map(m => <div key={m} className="h-12 bg-slate-100 rounded-xl" />)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : list.length === 0 ? (
             <EmptyState
               icon={Sparkles}
               title="No active instances yet"
@@ -394,7 +332,7 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
                   key={i.id}
                   inst={i}
                   onSelect={() => setSel(i)}
-                  onOpen={() => onOpen?.({ id: i.id, name: i.name, org: i.org, version: i.version, status: i.status })}
+                  onOpen={() => openInstance(i)}
                   onEdit={() => { setSel(i); setEditOpen(true); }}
                   onExportHistory={() => { setSel(i); setExportOpen(true); }}
                   onDuplicatePeriod={() => { setSel(i); setDupOpen(true); }}
@@ -404,22 +342,23 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
           )}
         </>
       ) : (
-        <ArchivedGallery rows={archivedFiltered} totalCount={archivedSeed.length} query={query} />
+        <ArchivedGallery rows={archivedList} query={query} />
       )}
 
       {/* Drawer */}
       {sel && (
         <InstanceDetailDrawer
-          instance={sel}
+          instanceId={sel.id}
+          instanceSummary={sel}
           onClose={() => setSel(null)}
           onEdit={() => setEditOpen(true)}
           onExportHistory={() => setExportOpen(true)}
-          onOpenWorkspace={() => onOpen?.({ id: sel.id, name: sel.name, org: sel.org, version: sel.version, status: sel.status })}
+          onOpenWorkspace={() => openInstance(sel)}
         />
       )}
 
       {newOpen && <NewInstanceModal onClose={() => setNewOpen(false)} />}
-      {editOpen && sel && <EditInstanceModal instance={sel} onClose={() => setEditOpen(false)} />}
+      {editOpen && sel && <EditInstanceModal instance={sel} onClose={() => { setEditOpen(false); }} />}
       {exportOpen && <ExportHistoryPdfModal onClose={() => setExportOpen(false)} />}
       {dupOpen && sel && <DuplicatePeriodModal instance={sel} onClose={() => setDupOpen(false)} />}
     </div>
@@ -430,7 +369,7 @@ export function Instances({ onOpen }: { onOpen?: (i: ActiveInstance) => void } =
 function InstanceCard({
   inst, onSelect, onOpen, onEdit, onExportHistory, onDuplicatePeriod,
 }: {
-  inst: Instance; onSelect: () => void; onOpen: () => void; onEdit: () => void; onExportHistory: () => void; onDuplicatePeriod: () => void;
+  inst: InstanceSummary; onSelect: () => void; onOpen: () => void; onEdit: () => void; onExportHistory: () => void; onDuplicatePeriod: () => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -441,7 +380,8 @@ function InstanceCard({
     return () => document.removeEventListener("mousedown", h);
   }, [moreOpen]);
 
-  const progColor = inst.progress >= 100 ? "#10B981" : inst.progress >= 70 ? "#1E63D9" : inst.progress >= 40 ? "#F59E0B" : "#94A3B8";
+  const progress = computeProgress(inst);
+  const progColor = progress >= 100 ? "#10B981" : progress >= 70 ? "#1E63D9" : progress >= 40 ? "#F59E0B" : "#94A3B8";
 
   return (
     <div
@@ -504,11 +444,11 @@ function InstanceCard({
       {/* owner + last modified */}
       <div className="mt-4 flex items-center gap-3">
         <div className="size-7 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 10, fontWeight: 500 }}>
-          {inst.ownerInitials}
+          {initials(inst.createdByName)}
         </div>
         <div className="min-w-0">
-          <div className="truncate" style={{ fontSize: 12, color: "#0A2540", fontWeight: 500 }}>{inst.owner}</div>
-          <div className="truncate" style={{ fontSize: 11, color: "#94A3B8" }}>Updated {inst.lastDate} · {inst.lastBy}</div>
+          <div className="truncate" style={{ fontSize: 12, color: "#0A2540", fontWeight: 500 }}>{inst.createdByName}</div>
+          <div className="truncate" style={{ fontSize: 11, color: "#94A3B8" }}>Updated {formatDate(inst.updatedAt)}</div>
         </div>
       </div>
 
@@ -521,24 +461,28 @@ function InstanceCard({
               <HelpCircle className="size-3 text-slate-400" />
             </Tip>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#0A2540" }}>{inst.progress}%</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#0A2540" }}>{progress}%</span>
         </div>
         <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full rounded-full transition-all" style={{ width: `${inst.progress}%`, background: progColor }} />
+          <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: progColor }} />
         </div>
       </div>
 
       {/* section indicators */}
       <div className="mt-4 grid grid-cols-5 gap-1.5">
-        {inst.sections.map(s => {
-          const Ic = sectionIcons[s.key];
-          const done = s.pct >= 100;
-          const partial = s.pct > 0 && s.pct < 100;
+        {sectionKeys.map(key => {
+          const { status, tooltip } = getSectionStatus(inst, key);
+          const Ic = sectionIcons[key];
+          const cls = status === "complete"
+            ? "bg-emerald-50/60 border-emerald-100 text-emerald-700"
+            : status === "in_progress"
+              ? "bg-blue-50/60 border-blue-100 text-[#1E63D9]"
+              : "bg-slate-50 border-black/5 text-slate-400";
           return (
-            <Tip key={s.key} text={`${sectionLabel[s.key]} · ${s.pct}%`}>
-              <div className={`flex flex-col items-center gap-1 p-2 rounded-xl border ${done ? "bg-emerald-50/60 border-emerald-100" : partial ? "bg-blue-50/60 border-blue-100" : "bg-slate-50 border-black/5"}`}>
-                <Ic className={`size-3.5 ${done ? "text-emerald-700" : partial ? "text-[#1E63D9]" : "text-slate-400"}`} strokeWidth={1.75} />
-                <span style={{ fontSize: 9, color: done ? "#047857" : partial ? "#1E63D9" : "#94A3B8", fontWeight: 500 }}>{sectionLabel[s.key]}</span>
+            <Tip key={key} text={`${sectionLabel[key]} · ${tooltip}`}>
+              <div className={`flex flex-col items-center gap-1 p-2 rounded-xl border ${cls}`}>
+                <Ic className="size-3.5" strokeWidth={1.75} />
+                <span style={{ fontSize: 9, fontWeight: 500 }}>{sectionShort[key]}</span>
               </div>
             </Tip>
           );
@@ -547,7 +491,7 @@ function InstanceCard({
 
       {/* footer */}
       <div className="mt-5 pt-4 border-t border-black/5 flex items-center justify-between" onClick={e => e.stopPropagation()}>
-        <span style={{ fontSize: 11, color: "#94A3B8" }}>Created {inst.created}</span>
+        <span style={{ fontSize: 11, color: "#94A3B8" }}>Created {formatDate(inst.createdAt)}</span>
         <button
           onClick={onOpen}
           className="h-9 px-4 rounded-xl bg-[#0A2540] hover:bg-[#0F3057] text-white inline-flex items-center gap-1.5 transition shadow-[0_8px_24px_-12px_rgba(10,37,64,0.5)]"
@@ -569,7 +513,7 @@ function IconAction({ icon: Ic, onClick }: { icon: any; onClick?: () => void }) 
 }
 
 // ───────────────────────── Archived gallery
-function ArchivedGallery({ rows, totalCount, query }: { rows: typeof archivedSeed; totalCount: number; query: string }) {
+function ArchivedGallery({ rows, query }: { rows: InstanceSummary[]; query: string }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -582,7 +526,7 @@ function ArchivedGallery({ rows, totalCount, query }: { rows: typeof archivedSee
           </Tip>
         </div>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600" style={{ fontSize: 11, fontWeight: 500 }}>
-          <Archive className="size-3" /> {rows.length} of {totalCount}
+          <Archive className="size-3" /> {rows.length}
         </span>
       </div>
 
@@ -597,23 +541,14 @@ function ArchivedGallery({ rows, totalCount, query }: { rows: typeof archivedSee
           {rows.map(r => (
             <div key={r.id} className="bg-white rounded-2xl border border-black/5 p-5 opacity-90 hover:opacity-100 hover:border-black/10 transition">
               <div className="flex items-start justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600" style={{ fontSize: 11, fontWeight: 500 }}>
-                  <Archive className="size-3" /> Archived
-                </span>
-                <Tip text={r.terminated ? "Permanently delete this terminated instance." : "Terminate this instance."}>
-                  <span style={{ fontSize: 10, color: r.terminated ? "#BE123C" : "#94A3B8", fontWeight: 500 }}>
-                    {r.terminated ? "TERMINATED" : ""}
-                  </span>
-                </Tip>
+                <StatusChip s={r.status} />
               </div>
               <div className="mt-3" style={{ fontSize: 16, fontWeight: 600, color: "#0A2540", letterSpacing: "-0.01em" }}>{r.name}</div>
               <div style={{ fontSize: 12, color: "#64748B" }}>{r.org} · {r.version}</div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Meta label="Archived" value={r.archDate} />
-                <Meta label="Archived by" value={r.archBy} />
-                <Meta label="Last status" value={statusMeta[r.last].label} />
-                <Meta label="Owner" value={r.owner} />
+                <Meta label="Archived" value={formatDate(r.updatedAt)} />
+                <Meta label="Owner" value={r.createdByName} />
               </div>
 
               <div className="mt-5 pt-4 border-t border-black/5 flex items-center justify-between">
@@ -624,16 +559,10 @@ function ArchivedGallery({ rows, totalCount, query }: { rows: typeof archivedSee
                   <Tip text="Export PDF summary.">
                     <IconAction icon={FileDown} />
                   </Tip>
-                  <Tip text="Export history PDF includes the full activity and change history since creation.">
+                  <Tip text="Export history PDF.">
                     <IconAction icon={ScrollText} />
                   </Tip>
-                  <Tip text={r.terminated ? "Delete this terminated instance." : "More actions."}>
-                    <IconAction icon={r.terminated ? Trash2 : MoreHorizontal} />
-                  </Tip>
                 </div>
-                <button className="h-9 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-black/10 text-slate-700 inline-flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 500 }}>
-                  <ArchiveRestore className="size-3.5" /> Restore
-                </button>
               </div>
             </div>
           ))}
@@ -668,12 +597,18 @@ function EmptyState({ icon: Ic, title, subtitle, action }: { icon: any; title: s
 
 // ───────────────────────── Detail Drawer
 function InstanceDetailDrawer({
-  instance, onClose, onEdit, onExportHistory, onOpenWorkspace,
+  instanceId, instanceSummary, onClose, onEdit, onExportHistory, onOpenWorkspace,
 }: {
-  instance: Instance; onClose: () => void; onEdit: () => void; onExportHistory: () => void; onOpenWorkspace?: () => void;
+  instanceId: string; instanceSummary: InstanceSummary; onClose: () => void; onEdit: () => void; onExportHistory: () => void; onOpenWorkspace?: () => void;
 }) {
   const [tab, setTab] = useState<"overview" | "activity" | "comments">("overview");
   const [commentText, setCommentText] = useState("");
+
+  const { data: fullInstance } = useInstance(instanceId);
+  const { data: participants = [] } = useParticipants(instanceId);
+  const { data: activityLog = [] } = useActivityLog(instanceId);
+
+  const description = fullInstance?.description || "No description provided.";
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -684,16 +619,16 @@ function InstanceDetailDrawer({
           <div className="flex items-start justify-between">
             <div>
               <div style={{ fontSize: 11, color: "#64748B", fontWeight: 500, letterSpacing: "0.06em" }}>INSTANCE DETAILS</div>
-              <div className="mt-1.5" style={{ fontSize: 18, fontWeight: 600, color: "#0A2540", letterSpacing: "-0.01em" }}>{instance.name}</div>
-              <div style={{ fontSize: 12, color: "#64748B" }}>{instance.org} · {instance.version}</div>
+              <div className="mt-1.5" style={{ fontSize: 18, fontWeight: 600, color: "#0A2540", letterSpacing: "-0.01em" }}>{instanceSummary.name}</div>
+              <div style={{ fontSize: 12, color: "#64748B" }}>{instanceSummary.org} · {instanceSummary.version}</div>
             </div>
             <button onClick={onClose} className="size-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
               <X className="size-4 text-slate-600" />
             </button>
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <StatusChip s={instance.status} />
-            <span style={{ fontSize: 11, color: "#94A3B8" }}>· Owner {instance.owner}</span>
+            <StatusChip s={instanceSummary.status} />
+            <span style={{ fontSize: 11, color: "#94A3B8" }}>· Owner {instanceSummary.createdByName}</span>
           </div>
 
           {/* tabs */}
@@ -721,47 +656,58 @@ function InstanceDetailDrawer({
             <>
               <div>
                 <div style={{ fontSize: 11, color: "#64748B", fontWeight: 500, letterSpacing: "0.04em" }}>DESCRIPTION</div>
-                <div className="mt-1.5" style={{ fontSize: 13, color: "#0A2540", lineHeight: 1.55 }}>{instance.description}</div>
+                <div className="mt-1.5" style={{ fontSize: 13, color: "#0A2540", lineHeight: 1.55 }}>{description}</div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#0A2540" }}>Progress by section</div>
-                  <span style={{ fontSize: 12, color: "#94A3B8" }}>{instance.progress}% overall</span>
+                  <span style={{ fontSize: 12, color: "#94A3B8" }}>{computeProgress(instanceSummary)}% overall</span>
                 </div>
                 <div className="space-y-2.5">
-                  {instance.sections.map((s, i) => (
-                    <div key={i}>
-                      <div className="flex items-center justify-between" style={{ fontSize: 12 }}>
-                        <span style={{ color: "#0A2540" }}>{s.name}</span>
-                        <span style={{ color: s.pct === 100 ? "#047857" : "#64748B", fontWeight: 500 }}>
-                          {s.pct === 100 ? "Completed" : `${s.pct}%`}
-                        </span>
+                  {sectionKeys.map(key => {
+                    const { status, tooltip } = getSectionStatus(instanceSummary, key);
+                    const pct = status === "complete" ? 100 : status === "in_progress" ? 50 : 0;
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between" style={{ fontSize: 12 }}>
+                          <span style={{ color: "#0A2540" }}>{sectionLabel[key]}</span>
+                          <span style={{ color: status === "complete" ? "#047857" : "#64748B", fontWeight: 500 }}>
+                            {status === "complete" ? "Completed" : status === "in_progress" ? "In progress" : "Not started"}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: status === "complete" ? "#10B981" : status === "in_progress" ? "#1E63D9" : "#CBD5E1" }} />
+                        </div>
+                        <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 2 }}>{tooltip}</div>
                       </div>
-                      <div className="mt-1 h-1 rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: s.pct === 100 ? "#10B981" : s.pct >= 60 ? "#1E63D9" : "#F59E0B" }} />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#0A2540", marginBottom: 12 }}>Participants</div>
-                <div className="space-y-1.5">
-                  {instance.participants.map((p, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50">
-                      <div className={`size-9 rounded-full bg-gradient-to-br ${p.color} flex items-center justify-center text-white`} style={{ fontSize: 11, fontWeight: 500 }}>
-                        {p.initials}
+                {participants.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-slate-50 text-center" style={{ fontSize: 12, color: "#64748B" }}>
+                    No participants yet.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {participants.map((p, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50">
+                        <div className="size-9 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 11, fontWeight: 500 }}>
+                          {initials(p.userDisplayName)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{p.userDisplayName}</div>
+                          <div className="truncate" style={{ fontSize: 11, color: "#94A3B8" }}>{p.userEmail}</div>
+                        </div>
+                        <RoleChip role={p.role} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{p.name}</div>
-                        <div className="truncate" style={{ fontSize: 11, color: "#94A3B8" }}>{p.email}</div>
-                      </div>
-                      <RoleChip role={p.role} />
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -769,16 +715,22 @@ function InstanceDetailDrawer({
           {tab === "activity" && (
             <div className="relative">
               <div className="absolute left-[15px] top-1 bottom-1 w-px bg-slate-200" />
-              <div className="space-y-4">
-                {instance.activity.map((e, i) => (
-                  <div key={i} className="relative pl-10">
-                    <div className="absolute left-2 top-1 size-3 rounded-full bg-white border-2 border-[#1E63D9]" />
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{e.action}</div>
-                    <div style={{ fontSize: 11, color: "#94A3B8" }}>{e.author} · {e.date}</div>
-                    {e.note && <div className="mt-1.5 p-2.5 rounded-lg bg-slate-50 border border-black/5" style={{ fontSize: 12, color: "#475569" }}>{e.note}</div>}
-                  </div>
-                ))}
-              </div>
+              {activityLog.length === 0 ? (
+                <div className="pl-10 py-4 text-center" style={{ fontSize: 12, color: "#94A3B8" }}>
+                  No activity recorded yet.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activityLog.map((e, i) => (
+                    <div key={i} className="relative pl-10">
+                      <div className="absolute left-2 top-1 size-3 rounded-full bg-white border-2 border-[#1E63D9]" />
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{e.action}</div>
+                      <div style={{ fontSize: 11, color: "#94A3B8" }}>{e.user?.displayName || "System"} · {formatDate(e.createdAt)}</div>
+                      {e.details && <div className="mt-1.5 p-2.5 rounded-lg bg-slate-50 border border-black/5" style={{ fontSize: 12, color: "#475569" }}>{e.details}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -788,24 +740,8 @@ function InstanceDetailDrawer({
                 <MessageSquare className="size-4 text-slate-500" />
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#0A2540" }}>Comments & change notes</div>
               </div>
-              <div className="space-y-2.5">
-                {instance.comments.length === 0 && (
-                  <div className="p-4 rounded-xl bg-slate-50 text-center" style={{ fontSize: 12, color: "#64748B" }}>
-                    No comments yet.
-                  </div>
-                )}
-                {instance.comments.map((c, i) => (
-                  <div key={i} className="p-3 rounded-xl bg-slate-50 border border-black/5">
-                    <div className="flex items-center gap-2">
-                      <div className="size-6 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 10, fontWeight: 500 }}>
-                        {c.initials}
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "#0A2540" }}>{c.author}</span>
-                      <span style={{ fontSize: 11, color: "#94A3B8" }}>· {c.date}</span>
-                    </div>
-                    <div className="mt-2" style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{c.msg}</div>
-                  </div>
-                ))}
+              <div className="p-4 rounded-xl bg-slate-50 text-center" style={{ fontSize: 12, color: "#64748B" }}>
+                Comments will be available in a future update.
               </div>
               <div className="mt-3 flex items-end gap-2">
                 <textarea
@@ -813,10 +749,11 @@ function InstanceDetailDrawer({
                   onChange={e => setCommentText(e.target.value)}
                   rows={2}
                   placeholder="Add comment or change note…"
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-black/5 focus:bg-white focus:border-[#1E63D9]/40 outline-none resize-none"
+                  disabled
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-black/5 focus:bg-white focus:border-[#1E63D9]/40 outline-none resize-none opacity-50"
                   style={{ fontSize: 12 }}
                 />
-                <PrimaryButton>Post</PrimaryButton>
+                <PrimaryButton disabled>Post</PrimaryButton>
               </div>
             </div>
           )}
@@ -837,17 +774,17 @@ function InstanceDetailDrawer({
   );
 }
 
-function RoleChip({ role }: { role: Participant["role"] }) {
+function RoleChip({ role }: { role: string }) {
   const map: Record<string, string> = {
     Author: "bg-blue-50 text-blue-700",
     Responsible: "bg-emerald-50 text-emerald-700",
     Reviewer: "bg-amber-50 text-amber-700",
     Approver: "bg-violet-50 text-violet-700",
   };
-  return <span className={`px-2 py-0.5 rounded-full ${map[role]}`} style={{ fontSize: 10, fontWeight: 500 }}>{role}</span>;
+  return <span className={`px-2 py-0.5 rounded-full ${map[role] || "bg-slate-50 text-slate-600"}`} style={{ fontSize: 10, fontWeight: 500 }}>{role}</span>;
 }
 
-// ───────────────────────── Modals (unchanged structure)
+// ───────────────────────── Modals
 function ModalShell({ title, subtitle, onClose, children, footer, width = 760 }: {
   title: string; subtitle?: string; onClose: () => void; children: ReactNode; footer: ReactNode; width?: number;
 }) {
@@ -884,6 +821,17 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 const inputCls = "w-full h-10 px-3 rounded-xl bg-slate-50 border border-black/5 focus:bg-white focus:border-[#1E63D9]/40 outline-none";
 
 function NewInstanceModal({ onClose }: { onClose: () => void }) {
+  const createInstance = useCreateInstance();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  const handleSubmit = () => {
+    if (!name.trim()) return;
+    createInstance.mutate({ name: name.trim(), description: description.trim() || undefined }, {
+      onSuccess: onClose,
+    });
+  };
+
   return (
     <ModalShell
       title="Create continuity instance"
@@ -891,20 +839,34 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={<>
         <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-        <PrimaryButton onClick={onClose}>Create instance</PrimaryButton>
+        <PrimaryButton onClick={handleSubmit} disabled={!name.trim() || createInstance.isPending}>
+          {createInstance.isPending ? "Creating..." : "Create instance"}
+        </PrimaryButton>
       </>}
     >
       <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-5 md:gap-7">
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2"><Field label="Instance name"><input className={inputCls} style={{ fontSize: 13 }} placeholder="e.g. Q2 2026 Continuity Analysis" /></Field></div>
-          <Field label="Organization"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="Bebidas Perú S.A." /></Field>
-          <Field label="Version"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="v1.0" /></Field>
-          <Field label="Country"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="Peru" /></Field>
-          <Field label="Business industry"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="Consumer Goods · Beverages" /></Field>
-          <div className="col-span-2"><Field label="Owner"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="Camila Vargas" /></Field></div>
+          <div className="col-span-2">
+            <Field label="Instance name">
+              <input
+                className={inputCls}
+                style={{ fontSize: 13 }}
+                placeholder="e.g. Q2 2026 Continuity Analysis"
+                value={name}
+                onChange={e => setName(e.target.value)}
+              />
+            </Field>
+          </div>
           <div className="col-span-2">
             <Field label="Description">
-              <textarea rows={3} className={inputCls + " h-auto py-2 resize-none"} style={{ fontSize: 13 }} placeholder="Briefly describe the scope of this continuity analysis…" />
+              <textarea
+                rows={3}
+                className={inputCls + " h-auto py-2 resize-none"}
+                style={{ fontSize: 13 }}
+                placeholder="Briefly describe the scope of this continuity analysis…"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
             </Field>
           </div>
         </div>
@@ -912,7 +874,7 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
         <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-black/5">
           <div style={{ fontSize: 11, color: "#64748B", fontWeight: 500, letterSpacing: "0.04em" }}>WORKFLOW PREVIEW</div>
           <div className="mt-3 space-y-3">
-            {["Instance Description", "BIA Framework", "Dependencies", "Risk Assessment", "Reports"].map((s, i) => (
+            {["Organizational Context", "BIA Framework", "Dependencies", "Risk Assessment", "Reports"].map((s, i) => (
               <div key={s} className="flex items-center gap-3">
                 <div className="size-7 rounded-full bg-white border border-black/5 flex items-center justify-center" style={{ fontSize: 11, fontWeight: 600, color: "#0A2540" }}>{i + 1}</div>
                 <div style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{s}</div>
@@ -925,7 +887,26 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function EditInstanceModal({ instance, onClose }: { instance: Instance; onClose: () => void }) {
+function EditInstanceModal({ instance, onClose }: { instance: InstanceSummary; onClose: () => void }) {
+  const updateInstance = useUpdateInstance();
+  const { data: fullInstance } = useInstance(instance.id);
+  const [name, setName] = useState(instance.name);
+  const [description, setDescription] = useState(fullInstance?.description || "");
+
+  useEffect(() => {
+    if (fullInstance?.description) {
+      setDescription(fullInstance.description);
+    }
+  }, [fullInstance?.description]);
+
+  const handleSubmit = () => {
+    if (!name.trim()) return;
+    updateInstance.mutate({
+      id: instance.id,
+      data: { name: name.trim(), description: description.trim() || undefined },
+    }, { onSuccess: onClose });
+  };
+
   return (
     <ModalShell
       title="Edit instance details"
@@ -934,19 +915,27 @@ function EditInstanceModal({ instance, onClose }: { instance: Instance; onClose:
       width={620}
       footer={<>
         <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-        <PrimaryButton onClick={onClose}>Save changes</PrimaryButton>
+        <PrimaryButton onClick={handleSubmit} disabled={!name.trim() || updateInstance.isPending}>
+          {updateInstance.isPending ? "Saving..." : "Save changes"}
+        </PrimaryButton>
       </>}
     >
       <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2"><Field label="Instance name"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.name} /></Field></div>
-        <Field label="Organization"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.org} /></Field>
-        <Field label="Version"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.version} /></Field>
-        <Field label="Country"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.country} /></Field>
-        <Field label="Business industry"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.industry} /></Field>
-        <div className="col-span-2"><Field label="Owner"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.owner} /></Field></div>
+        <div className="col-span-2">
+          <Field label="Instance name">
+            <input className={inputCls} style={{ fontSize: 13 }} value={name} onChange={e => setName(e.target.value)} />
+          </Field>
+        </div>
         <div className="col-span-2">
           <Field label="Description">
-            <textarea rows={3} className={inputCls + " h-auto py-2 resize-none"} style={{ fontSize: 13 }} defaultValue={instance.description} />
+            <textarea
+              rows={3}
+              className={inputCls + " h-auto py-2 resize-none"}
+              style={{ fontSize: 13 }}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Instance description"
+            />
           </Field>
         </div>
       </div>
@@ -954,7 +943,8 @@ function EditInstanceModal({ instance, onClose }: { instance: Instance; onClose:
   );
 }
 
-function DuplicatePeriodModal({ instance, onClose }: { instance: Instance; onClose: () => void }) {
+function DuplicatePeriodModal({ instance, onClose }: { instance: InstanceSummary; onClose: () => void }) {
+  const duplicateInstance = useDuplicateInstance();
   const copyOpts = [
     "Copy Department Description",
     "Copy Organizational Context",
@@ -965,6 +955,11 @@ function DuplicatePeriodModal({ instance, onClose }: { instance: Instance; onClo
     "Do not copy comments and history",
   ];
   const [checked, setChecked] = useState<boolean[]>([true, true, true, true, true, true, true]);
+
+  const handleSubmit = () => {
+    duplicateInstance.mutate(instance.id, { onSuccess: onClose });
+  };
+
   return (
     <ModalShell
       title="Duplicate instance for new period"
@@ -973,7 +968,12 @@ function DuplicatePeriodModal({ instance, onClose }: { instance: Instance; onClo
       width={760}
       footer={<>
         <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-        <PrimaryButton onClick={onClose}><span className="inline-flex items-center gap-1.5"><Sparkles className="size-3.5" /> Create new period instance</span></PrimaryButton>
+        <PrimaryButton onClick={handleSubmit} disabled={duplicateInstance.isPending}>
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles className="size-3.5" />
+            {duplicateInstance.isPending ? "Duplicating..." : "Create new period instance"}
+          </span>
+        </PrimaryButton>
       </>}
     >
       <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50/60 border border-blue-100 mb-5">
@@ -986,15 +986,8 @@ function DuplicatePeriodModal({ instance, onClose }: { instance: Instance; onClo
       <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5 md:gap-7">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2"><Field label="New instance name"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={`${instance.name} — new period`} /></Field></div>
-          <Field label="New period"><input className={inputCls} style={{ fontSize: 13 }} placeholder="e.g. Q2 2026" /></Field>
-          <Field label="Version"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="v1.0" /></Field>
           <Field label="Organization"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.org} /></Field>
-          <Field label="Owner"><input className={inputCls} style={{ fontSize: 13 }} defaultValue={instance.owner} /></Field>
-          <div className="col-span-2">
-            <Field label="Description">
-              <textarea rows={3} className={inputCls + " h-auto py-2 resize-none"} style={{ fontSize: 13 }} defaultValue={instance.description} />
-            </Field>
-          </div>
+          <Field label="Version"><input className={inputCls} style={{ fontSize: 13 }} defaultValue="v1.0" /></Field>
         </div>
 
         <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-black/5">
