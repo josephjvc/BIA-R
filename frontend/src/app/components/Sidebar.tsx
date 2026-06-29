@@ -249,8 +249,8 @@ export function Sidebar() {
   );
 }
 
-function MiniStatusChip({ s }: { s: InstanceStatus }) {
-  const m = statusMeta[s];
+function MiniStatusChip({ s }: { s: string }) {
+  const m = statusMeta[s as InstanceStatus] ?? statusMeta.in_progress;
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${m.tone}`} style={{ fontSize: 10, fontWeight: 500 }}>
       <span className={`size-1.5 rounded-full ${m.dot}`} /> {m.label}
@@ -288,7 +288,7 @@ function WorkflowStepper({ status }: { status: InstanceStatus }) {
         ))}
       </div>
       <div className="mt-1.5 truncate" style={{ fontSize: 10.5, color: "#64748B" }}>
-        Stage: <span style={{ color: status === "disapproved" ? "#BE123C" : "#0A2540", fontWeight: 500 }}>{statusMeta[status].label}</span>
+        Stage: <span style={{ color: status === "disapproved" ? "#BE123C" : "#0A2540", fontWeight: 500 }}>{(statusMeta[status] ?? statusMeta.in_progress).label}</span>
       </div>
     </div>
   );

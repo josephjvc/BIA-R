@@ -82,8 +82,8 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function StatusChip({ s }: { s: InstanceStatus }) {
-  const m = statusMeta[s];
+export function StatusChip({ s }: { s: string }) {
+  const m = statusMeta[s as InstanceStatus] ?? statusMeta.in_progress;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${m.tone}`} style={{ fontSize: 11, fontWeight: 500 }}>
       <span className={`size-1.5 rounded-full ${m.dot}`} /> {m.label}

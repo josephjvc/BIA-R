@@ -1,15 +1,28 @@
 import client from "./client";
 import type {
   Instance, InstanceSummary, CreateInstancePayload, UpdateInstancePayload,
-  InstanceParticipant, AddParticipantPayload, StatusActionPayload,
+  InstanceParticipant, AddParticipantPayload, StatusActionPayload, InstanceStatus,
 } from "../types/instance";
 
+const VALID_STATUSES: InstanceStatus[] = [
+  "in_progress", "completed", "reviewed", "approved", "disapproved", "finished", "archived",
+];
+
+function normalizeStatus(s: string | null | undefined): InstanceStatus {
+  if (s && (VALID_STATUSES as string[]).includes(s)) return s as InstanceStatus;
+  return "in_progress";
+}
+
+function normalizeInstance<T extends { status: string }>(inst: T): T {
+  return { ...inst, status: normalizeStatus(inst.status) as any };
+}
+
 export function getInstances(): Promise<InstanceSummary[]> {
-  return client.get("/api/instances").then((r) => r.data);
+  return client.get("/api/instances").then((r) => r.data.map(normalizeInstance));
 }
 
 export function getInstance(id: string): Promise<Instance> {
-  return client.get(`/api/instances/${id}`).then((r) => r.data);
+  return client.get(`/api/instances/${id}`).then((r) => normalizeInstance(r.data));
 }
 
 export function createInstance(payload: CreateInstancePayload): Promise<Instance> {
