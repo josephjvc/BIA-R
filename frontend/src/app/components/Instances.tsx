@@ -868,6 +868,21 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [company, setCompany] = useState("");
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
+  const [startToday, setStartToday] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const handleStartToday = () => {
+    setPeriodStart(today);
+    setStartToday(true);
+  };
+
+  const handlePeriodStartChange = (value: string) => {
+    setPeriodStart(value);
+    setStartToday(value === today);
+  };
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -875,6 +890,8 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
       name: name.trim(),
       description: description.trim() || undefined,
       organizationName: company.trim() || undefined,
+      periodStart: periodStart || undefined,
+      periodEnd: periodEnd || undefined,
     }, {
       onSuccess: onClose,
     });
@@ -925,6 +942,42 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
                 placeholder="e.g. Acme Corp"
                 value={company}
                 onChange={e => setCompany(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <Field label="Period start">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="date"
+                  className={inputCls}
+                  style={{ fontSize: 13 }}
+                  value={periodStart}
+                  onChange={e => handlePeriodStartChange(e.target.value)}
+                />
+                {!startToday ? (
+                  <button
+                    onClick={handleStartToday}
+                    className="shrink-0 h-10 px-3 rounded-xl bg-[#1E63D9]/10 hover:bg-[#1E63D9]/20 text-[#1E63D9] text-xs font-medium transition flex items-center gap-1"
+                  >
+                    <Calendar className="size-3" /> Today
+                  </button>
+                ) : (
+                  <div className="shrink-0 h-10 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-center gap-1">
+                    <Check className="size-3" /> Today
+                  </div>
+                )}
+              </div>
+            </Field>
+          </div>
+          <div className="col-span-2">
+            <Field label="Period end">
+              <input
+                type="date"
+                className={inputCls}
+                style={{ fontSize: 13 }}
+                value={periodEnd}
+                onChange={e => setPeriodEnd(e.target.value)}
               />
             </Field>
           </div>

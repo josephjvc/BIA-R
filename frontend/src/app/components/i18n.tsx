@@ -69,6 +69,21 @@ const dict: Dict = {
   "error.generic": { en: "An unexpected error occurred", es: "Ocurrió un error inesperado" },
   "error.invalidCredentials": { en: "Invalid email or password", es: "Email o contraseña inválidos" },
   "error.emailTaken": { en: "This email is already registered", es: "Este email ya está registrado" },
+  "error.network": { en: "Cannot connect to server. Please try again.", es: "No se puede conectar al servidor. Inténtalo de nuevo." },
+  "error.timeout": { en: "Request timeout. Please try again.", es: "Tiempo de espera agotado. Inténtalo de nuevo." },
+
+  // Instance create
+  "instance.create": { en: "Create continuity instance", es: "Crear instancia de continuidad" },
+  "instance.subtitle": { en: "The new instance will start automatically with status: In progress.", es: "La nueva instancia comenzará automáticamente con estado: En progreso." },
+  "instance.name": { en: "Instance name", es: "Nombre de la instancia" },
+  "instance.desc": { en: "Description", es: "Descripción" },
+  "instance.company": { en: "Company (optional)", es: "Empresa (opcional)" },
+  "instance.periodStart": { en: "Period start", es: "Inicio del período" },
+  "instance.periodEnd": { en: "Period end", es: "Fin del período" },
+  "instance.startToday": { en: "Today", es: "Hoy" },
+  "instance.cancel": { en: "Cancel", es: "Cancelar" },
+  "instance.createBtn": { en: "Create instance", es: "Crear instancia" },
+  "instance.creating": { en: "Creating...", es: "Creando..." },
 
   // Common buttons
   "btn.save": { en: "Save analysis", es: "Guardar análisis" },

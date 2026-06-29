@@ -18,6 +18,6 @@ public interface UserMapper {
     @Mapping(target = "updatedAt", ignore = true)
     User toEntity(RegisterRequest req);
 
-    @Mapping(target = "organizationName", source = "organization.name")
+    @Mapping(target = "organizationName", expression = "java(user.getOrganization() != null ? user.getOrganization().getName() : null)")
     UserDto toDto(User user);
 }

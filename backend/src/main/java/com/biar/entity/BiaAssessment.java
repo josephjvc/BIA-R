@@ -1,6 +1,8 @@
 package com.biar.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -32,6 +34,7 @@ public class BiaAssessment {
 
     private String criticality;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "impact_categories", columnDefinition = "JSONB")
     private String impactCategories;
 

@@ -159,8 +159,17 @@ function SignInCard({ onSignUp }: { onSignUp: () => void }) {
     loginMutation.mutate(
       { email, password },
       { onError: (err: any) => {
-        const msg = err?.response?.data?.message || t("error.generic");
-        setApiError(msg);
+        console.error('Login error:', err);
+        if (err.response) {
+          const msg = err.response.data?.message || t("error.generic");
+          setApiError(msg);
+        } else if (err.code === 'ECONNABORTED') {
+          setApiError(t("error.timeout"));
+        } else if (err.request) {
+          setApiError(t("error.network"));
+        } else {
+          setApiError(t("error.generic"));
+        }
       }}
     );
   };
@@ -232,11 +241,18 @@ function SignUpCard({ onSignIn }: { onSignIn: () => void }) {
     const payload: RegisterPayload = { name, lastName: last, email, password, organizationName: org };
     registerMutation.mutate(payload, {
       onError: (err: any) => {
+        console.error('Register error:', err);
         const status = err?.response?.status;
         if (status === 409) {
-          setApiError("This email is already registered");
+          setApiError(t("error.emailTaken"));
+        } else if (err.response) {
+          setApiError(err.response.data?.message || t("error.generic"));
+        } else if (err.code === 'ECONNABORTED') {
+          setApiError(t("error.timeout"));
+        } else if (err.request) {
+          setApiError(t("error.network"));
         } else {
-          setApiError(err?.response?.data?.message || "An unexpected error occurred");
+          setApiError(t("error.generic"));
         }
       },
     });
