@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, Bell, Globe, HelpCircle } from "lucide-react";
 import { useLang, setLang, t } from "./i18n";
 import { useSearch, setSearch, useSearchContext } from "./searchStore";
+import { useAuthStore } from "../../shared/store/auth.store";
 
 const placeholders: Record<string, string> = {
   "instances:active": "Search instances by name, organization, owner, date, status…",
@@ -22,10 +23,15 @@ const helpExamples = [
   { label: "Archived instances", value: "archived name, archived date, archived by and last status" },
 ];
 
+function initials(name: string): string {
+  return name.split(" ").map(w => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
+}
+
 export function Header({ titleKey, subtitleKey }: { titleKey: string; subtitleKey: string }) {
   const lang = useLang();
   const q = useSearch();
   const ctx = useSearchContext();
+  const user = useAuthStore((s) => s.user);
   const [helpOpen, setHelpOpen] = useState(false);
   const helpRef = useRef<HTMLDivElement>(null);
 
@@ -112,11 +118,11 @@ export function Header({ titleKey, subtitleKey }: { titleKey: string; subtitleKe
 
         <div className="hidden xl:flex items-center gap-3 pl-3 border-l border-black/5">
           <div className="text-right">
-            <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>Camila Vargas</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{user?.displayName || "User"}</div>
             <div style={{ fontSize: 11, color: "#64748B" }}>{t("header.role")}</div>
           </div>
           <div className="size-10 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 13, fontWeight: 500 }}>
-            CV
+            {user ? initials(user.displayName) : "?"}
           </div>
         </div>
       </div>

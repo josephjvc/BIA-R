@@ -5,6 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { useInstanceStore } from "../shared/store/instance.store";
 import { useSidebarStore } from "../shared/store/sidebar.store";
+import { useAuthStore } from "../shared/store/auth.store";
 import { setSearchContext } from "./components/searchStore";
 
 const meta: Record<string, { titleKey: string; subtitleKey: string }> = {
@@ -16,6 +17,10 @@ const meta: Record<string, { titleKey: string; subtitleKey: string }> = {
   reports: { titleKey: "meta.reports.t", subtitleKey: "meta.reports.s" },
 };
 
+function initials(name: string): string {
+  return name.split(" ").map(w => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
+}
+
 export default function WorkspaceLayout() {
   const { instanceId } = useParams();
   const location = useLocation();
@@ -23,6 +28,7 @@ export default function WorkspaceLayout() {
   const activeInstance = useInstanceStore((s) => s.activeInstance);
   const mobileNavOpen = useSidebarStore((s) => s.mobileNavOpen);
   const setMobileNavOpen = useSidebarStore((s) => s.setMobileNavOpen);
+  const user = useAuthStore((s) => s.user);
 
   const screen = location.pathname.split("/").pop() || "dashboard";
   const m = meta[screen] || meta.dashboard;
@@ -70,7 +76,7 @@ export default function WorkspaceLayout() {
           </div>
         </div>
         <div className="size-9 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white shrink-0" style={{ fontSize: 12, fontWeight: 500 }}>
-          CV
+          {user ? initials(user.displayName) : "?"}
         </div>
       </div>
 
