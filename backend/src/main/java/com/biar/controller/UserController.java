@@ -8,6 +8,7 @@ import com.biar.repository.UserRepository;
 import com.biar.security.CurrentUser;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,11 +24,13 @@ public class UserController {
     }
 
     @GetMapping("/me")
+    @Transactional(readOnly = true)
     public ResponseEntity<UserDto> getProfile(@CurrentUser User user) {
         return ResponseEntity.ok(userMapper.toDto(user));
     }
 
     @PutMapping("/me")
+    @Transactional
     public ResponseEntity<UserDto> updateProfile(@Valid @RequestBody UpdateProfileRequest req,
                                                    @CurrentUser User user) {
         if (req.getDisplayName() != null) user.setDisplayName(req.getDisplayName());

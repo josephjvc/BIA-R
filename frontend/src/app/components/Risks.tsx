@@ -109,7 +109,7 @@ export function Risks() {
         <SectionTitle title="Treatment summary" action={<SecondaryButton>Export ISO 31000 report</SecondaryButton>} />
         <div className="grid grid-cols-4 gap-4">
           {[
-            { l: "Mitigate", v: mitigating, pct: Math.round(migrating / totalTreatments * 100), c: "#1E63D9" },
+            { l: "Mitigate", v: mitigating, pct: Math.round(mitigating / totalTreatments * 100), c: "#1E63D9" },
             { l: "Transfer", v: transferring, pct: Math.round(transferring / totalTreatments * 100), c: "#10B981" },
             { l: "Accept", v: accepting, pct: Math.round(accepting / totalTreatments * 100), c: "#F59E0B" },
             { l: "Avoid", v: avoiding, pct: Math.round(avoiding / totalTreatments * 100), c: "#E11D48" },
