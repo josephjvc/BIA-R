@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.biar: WARN
+
+app:
+  exports:
+    dir: /data/exports
+
+server:
+  forward-headers-strategy: framework
