@@ -1,9 +1,11 @@
 package com.biar.dto.risk;
 
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public class UpdateRiskRequest {
 
+    @Size(max = 255)
     private String name;
     private UUID processId;
     private String description;

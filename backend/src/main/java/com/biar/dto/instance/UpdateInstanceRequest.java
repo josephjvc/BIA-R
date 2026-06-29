@@ -1,9 +1,11 @@
 package com.biar.dto.instance;
 
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public class UpdateInstanceRequest {
 
+    @Size(max = 255)
     private String name;
     private String description;
     private LocalDate periodStart;

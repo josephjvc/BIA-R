@@ -27,6 +27,7 @@ public class ExportService {
     private final InstanceRepository instanceRepository;
     private final RiskService riskService;
     private final BiaService biaService;
+    private final InstanceAuthorizationService auth;
 
     @Value("${app.exports.dir:./exports}")
     private String exportsDir;
@@ -34,11 +35,13 @@ public class ExportService {
     public ExportService(InstanceExportRepository exportRepository,
                          InstanceRepository instanceRepository,
                          RiskService riskService,
-                         BiaService biaService) {
+                         BiaService biaService,
+                         InstanceAuthorizationService auth) {
         this.exportRepository = exportRepository;
         this.instanceRepository = instanceRepository;
         this.riskService = riskService;
         this.biaService = biaService;
+        this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -51,6 +54,7 @@ public class ExportService {
 
     @Transactional
     public ExportDto createExport(UUID instanceId, CreateExportRequest req, User user) {
+        auth.requireRead(instanceId, user);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 

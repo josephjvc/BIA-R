@@ -80,8 +80,9 @@ public class InstanceController {
     // ── Participants ──────────────────────────────────────
 
     @GetMapping("/{id}/participants")
-    public ResponseEntity<List<InstanceParticipantDto>> getParticipants(@PathVariable UUID id) {
-        return ResponseEntity.ok(instanceService.getParticipants(id));
+    public ResponseEntity<List<InstanceParticipantDto>> getParticipants(@PathVariable UUID id,
+                                                                          @CurrentUser User user) {
+        return ResponseEntity.ok(instanceService.getParticipants(id, user));
     }
 
     @PostMapping("/{id}/participants")
@@ -103,14 +104,16 @@ public class InstanceController {
     // ── Activity log ──────────────────────────────────────
 
     @GetMapping("/{id}/activity-log")
-    public ResponseEntity<List<InstanceActivityLog>> getActivityLog(@PathVariable UUID id) {
-        return ResponseEntity.ok(instanceService.getActivityLog(id));
+    public ResponseEntity<List<InstanceActivityLog>> getActivityLog(@PathVariable UUID id,
+                                                                     @CurrentUser User user) {
+        return ResponseEntity.ok(instanceService.getActivityLog(id, user));
     }
 
     // ── Status history ────────────────────────────────────
 
     @GetMapping("/{id}/history")
-    public ResponseEntity<List<InstanceStatusHistory>> getStatusHistory(@PathVariable UUID id) {
-        return ResponseEntity.ok(instanceService.getStatusHistory(id));
+    public ResponseEntity<List<InstanceStatusHistory>> getStatusHistory(@PathVariable UUID id,
+                                                                         @CurrentUser User user) {
+        return ResponseEntity.ok(instanceService.getStatusHistory(id, user));
     }
 }

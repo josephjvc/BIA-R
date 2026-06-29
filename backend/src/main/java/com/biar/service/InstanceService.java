@@ -179,7 +179,8 @@ public class InstanceService {
     // ── Participants ──────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<InstanceParticipantDto> getParticipants(UUID instanceId) {
+    public List<InstanceParticipantDto> getParticipants(UUID instanceId, User user) {
+        auth.requireRead(instanceId, user);
         return participantRepository.findByInstanceId(instanceId)
             .stream()
             .map(p -> {
@@ -240,14 +241,16 @@ public class InstanceService {
     // ── Activity log ──────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<InstanceActivityLog> getActivityLog(UUID instanceId) {
+    public List<InstanceActivityLog> getActivityLog(UUID instanceId, User user) {
+        auth.requireRead(instanceId, user);
         return activityLogService.getActivityLog(instanceId);
     }
 
     // ── Status history ────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<InstanceStatusHistory> getStatusHistory(UUID instanceId) {
+    public List<InstanceStatusHistory> getStatusHistory(UUID instanceId, User user) {
+        auth.requireRead(instanceId, user);
         return statusTransitionService.getHistory(instanceId);
     }
 }

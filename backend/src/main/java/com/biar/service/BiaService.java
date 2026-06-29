@@ -20,17 +20,20 @@ public class BiaService {
     private final BusinessProcessRepository processRepository;
     private final StatusTransitionService statusTransitionService;
     private final ActivityLogService activityLogService;
+    private final InstanceAuthorizationService auth;
 
     public BiaService(BiaAssessmentRepository biaRepository,
                       InstanceRepository instanceRepository,
                       BusinessProcessRepository processRepository,
                       StatusTransitionService statusTransitionService,
-                      ActivityLogService activityLogService) {
+                      ActivityLogService activityLogService,
+                      InstanceAuthorizationService auth) {
         this.biaRepository = biaRepository;
         this.instanceRepository = instanceRepository;
         this.processRepository = processRepository;
         this.statusTransitionService = statusTransitionService;
         this.activityLogService = activityLogService;
+        this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -50,6 +53,7 @@ public class BiaService {
 
     @Transactional
     public BiaAssessmentDto upsertAssessment(UUID instanceId, UUID processId, UpsertBiaRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
         BusinessProcess process = processRepository.findById(processId)

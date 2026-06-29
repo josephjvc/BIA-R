@@ -19,6 +19,7 @@ public class RiskService {
     private final BusinessProcessRepository processRepository;
     private final StatusTransitionService statusTransitionService;
     private final ActivityLogService activityLogService;
+    private final InstanceAuthorizationService auth;
 
     private static final RiskLevel[][] RISK_MATRIX = {
         { RiskLevel.VERY_LOW, RiskLevel.LOW,     RiskLevel.MEDIUM,  RiskLevel.MEDIUM,  RiskLevel.HIGH },
@@ -32,12 +33,14 @@ public class RiskService {
                        InstanceRepository instanceRepository,
                        BusinessProcessRepository processRepository,
                        StatusTransitionService statusTransitionService,
-                       ActivityLogService activityLogService) {
+                       ActivityLogService activityLogService,
+                       InstanceAuthorizationService auth) {
         this.riskRepository = riskRepository;
         this.instanceRepository = instanceRepository;
         this.processRepository = processRepository;
         this.statusTransitionService = statusTransitionService;
         this.activityLogService = activityLogService;
+        this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -57,6 +60,7 @@ public class RiskService {
 
     @Transactional
     public RiskDto createRisk(UUID instanceId, CreateRiskRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 
@@ -90,6 +94,7 @@ public class RiskService {
 
     @Transactional
     public RiskDto updateRisk(UUID instanceId, UUID riskId, UpdateRiskRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         Risk risk = riskRepository.findById(riskId)
             .orElseThrow(() -> new ResourceNotFoundException("Risk not found"));
 
@@ -129,6 +134,7 @@ public class RiskService {
 
     @Transactional
     public void deleteRisk(UUID instanceId, UUID riskId, User user) {
+        auth.requireEdit(instanceId, user);
         Risk risk = riskRepository.findById(riskId)
             .orElseThrow(() -> new ResourceNotFoundException("Risk not found"));
         riskRepository.delete(risk);

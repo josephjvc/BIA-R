@@ -19,17 +19,20 @@ public class ContextService {
     private final InstanceRepository instanceRepository;
     private final StatusTransitionService statusTransitionService;
     private final ActivityLogService activityLogService;
+    private final InstanceAuthorizationService auth;
 
     public ContextService(BusinessProcessRepository processRepository,
                           ProcessActivityRepository activityRepository,
                           InstanceRepository instanceRepository,
                           StatusTransitionService statusTransitionService,
-                          ActivityLogService activityLogService) {
+                          ActivityLogService activityLogService,
+                          InstanceAuthorizationService auth) {
         this.processRepository = processRepository;
         this.activityRepository = activityRepository;
         this.instanceRepository = instanceRepository;
         this.statusTransitionService = statusTransitionService;
         this.activityLogService = activityLogService;
+        this.auth = auth;
     }
 
     // ── Processes ────────────────────────────────────────
@@ -51,6 +54,7 @@ public class ContextService {
 
     @Transactional
     public BusinessProcessDto createProcess(UUID instanceId, CreateProcessRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 
@@ -68,6 +72,7 @@ public class ContextService {
 
     @Transactional
     public BusinessProcessDto updateProcess(UUID instanceId, UUID processId, UpdateProcessRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         BusinessProcess process = processRepository.findById(processId)
             .orElseThrow(() -> new ResourceNotFoundException("Process not found"));
         applyUpdate(process, req);
@@ -81,6 +86,7 @@ public class ContextService {
 
     @Transactional
     public void deleteProcess(UUID instanceId, UUID processId, User user) {
+        auth.requireEdit(instanceId, user);
         BusinessProcess process = processRepository.findById(processId)
             .orElseThrow(() -> new ResourceNotFoundException("Process not found"));
         processRepository.delete(process);
@@ -93,6 +99,7 @@ public class ContextService {
 
     @Transactional
     public ProcessActivityDto createActivity(UUID instanceId, UUID processId, CreateActivityRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         BusinessProcess process = processRepository.findById(processId)
             .orElseThrow(() -> new ResourceNotFoundException("Process not found"));
 
@@ -111,6 +118,7 @@ public class ContextService {
     @Transactional
     public ProcessActivityDto updateActivity(UUID instanceId, UUID processId, UUID activityId,
                                               UpdateActivityRequest req, User user) {
+        auth.requireEdit(instanceId, user);
         ProcessActivity activity = activityRepository.findById(activityId)
             .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
 
@@ -128,6 +136,7 @@ public class ContextService {
 
     @Transactional
     public void deleteActivity(UUID instanceId, UUID processId, UUID activityId, User user) {
+        auth.requireEdit(instanceId, user);
         ProcessActivity activity = activityRepository.findById(activityId)
             .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
         activityRepository.delete(activity);

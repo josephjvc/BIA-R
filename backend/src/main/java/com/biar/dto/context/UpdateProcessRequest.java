@@ -1,7 +1,10 @@
 package com.biar.dto.context;
 
+import jakarta.validation.constraints.Size;
+
 public class UpdateProcessRequest {
 
+    @Size(max = 255)
     private String name;
     private String businessUnit;
     private String owner;

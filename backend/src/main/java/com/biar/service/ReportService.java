@@ -27,6 +27,7 @@ public class ReportService {
     private final InstanceRepository instanceRepository;
     private final PdfGenerationService pdfGenerationService;
     private final ActivityLogService activityLogService;
+    private final InstanceAuthorizationService auth;
 
     @Value("${app.exports.dir:./exports}")
     private String exportsDir;
@@ -34,11 +35,13 @@ public class ReportService {
     public ReportService(ReportRepository reportRepository,
                          InstanceRepository instanceRepository,
                          PdfGenerationService pdfGenerationService,
-                         ActivityLogService activityLogService) {
+                         ActivityLogService activityLogService,
+                         InstanceAuthorizationService auth) {
         this.reportRepository = reportRepository;
         this.instanceRepository = instanceRepository;
         this.pdfGenerationService = pdfGenerationService;
         this.activityLogService = activityLogService;
+        this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -51,6 +54,7 @@ public class ReportService {
 
     @Transactional
     public ReportDto generateReport(UUID instanceId, GenerateReportRequest req, User user) {
+        auth.requireRead(instanceId, user);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 

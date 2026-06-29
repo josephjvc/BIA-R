@@ -1,11 +1,16 @@
 package com.biar.dto.bia;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 
 public class UpsertBiaRequest {
 
+    @Min(0) @Max(100000)
     private Integer mtpd;
+    @Min(0) @Max(100000)
     private Integer rto;
+    @Min(0) @Max(100000)
     private Integer rpo;
     private BigDecimal impactScore;
     private String criticality;
