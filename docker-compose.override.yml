@@ -1,20 +1,23 @@
-name: biar-project-dev
-
 services:
   backend:
     image: biar-backend-dev
+    container_name: biar-back-dev
     build:
+      context: ./backend
       dockerfile: Dockerfile.dev
     volumes:
       - ./backend/src:/app/src
       - ./backend/pom.xml:/app/pom.xml
+      - maven_cache:/app/.m2
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DEVTOOLS_RESTART_TRIGGER_FILE: /app/src
+      MAVEN_OPTS: -Dmaven.repo.local=/app/.m2
 
   frontend:
     image: biar-frontend-dev
+    container_name: biar-front-dev
     build:
+      context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
@@ -27,5 +30,10 @@ services:
       - ./frontend/pnpm-workspace.yaml:/app/pnpm-workspace.yaml
       - ./frontend/.npmrc:/app/.npmrc
       - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
+      - ./frontend/.env:/app/.env:ro
     environment:
-      VITE_API_URL: http://localhost:8080
+      VITE_API_URL: ""
+      VITE_PROXY_TARGET: http://backend:8080
+
+volumes:
+  maven_cache:
