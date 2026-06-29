@@ -1,0 +1,11 @@
+FROM eclipse-temurin:21-jdk-alpine
+RUN addgroup -S biar && adduser -S biar -G biar
+WORKDIR /app
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+RUN ./mvnw dependency:go-offline -q
+RUN mkdir -p /data/exports && chown -R biar:biar /data/exports
+RUN chown -R biar:biar /app
+USER biar
+EXPOSE 8080
+ENTRYPOINT ["./mvnw", "spring-boot:run", "-Dspring-boot.run.profiles=dev", "-Dspring-boot.run.jvmArguments=-Djdk.instrument.traceUsage=false"]

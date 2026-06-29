@@ -1,0 +1,31 @@
+name: biar-project-dev
+
+services:
+  backend:
+    image: biar-backend-dev
+    build:
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/pom.xml:/app/pom.xml
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DEVTOOLS_RESTART_TRIGGER_FILE: /app/src
+
+  frontend:
+    image: biar-frontend-dev
+    build:
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/pnpm-lock.yaml:/app/pnpm-lock.yaml
+      - ./frontend/pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      - ./frontend/.npmrc:/app/.npmrc
+      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
+    environment:
+      VITE_API_URL: http://localhost:8080
