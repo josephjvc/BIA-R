@@ -4,6 +4,7 @@ import { useLang, setLang, t } from "./i18n";
 import { Instances } from "./Instances";
 import { setSearchContext } from "./searchStore";
 import { useAuthStore } from "../../shared/store/auth.store";
+import { UserMenu } from "./UserMenu";
 
 function initials(name: string): string {
   return name.split(" ").map(w => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2);
@@ -49,18 +50,22 @@ export function InstancesPage() {
             <span style={{ fontSize: 12, fontWeight: 500, color: "#0A2540" }}>{lang === "en" ? "EN" : "ES"}</span>
           </button>
 
-          <div className="hidden md:flex items-center gap-3 pl-3 border-l border-black/5">
-            <div className="text-right">
-              <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{user?.displayName || "User"}</div>
-              <div style={{ fontSize: 11, color: "#64748B" }}>{t("header.role")}</div>
-            </div>
-            <div className="size-10 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 13, fontWeight: 500 }}>
+          <UserMenu>
+            <button className="hidden md:flex items-center gap-3 pl-3 border-l border-black/5 cursor-pointer">
+              <div className="text-right">
+                <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{user?.displayName || "User"}</div>
+                <div style={{ fontSize: 11, color: "#64748B" }}>{t("header.role")}</div>
+              </div>
+              <div className="size-10 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 13, fontWeight: 500 }}>
+                {user ? initials(user.displayName) : "?"}
+              </div>
+            </button>
+          </UserMenu>
+          <UserMenu>
+            <button className="md:hidden size-9 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white cursor-pointer" style={{ fontSize: 12, fontWeight: 500 }}>
               {user ? initials(user.displayName) : "?"}
-            </div>
-          </div>
-          <div className="md:hidden size-9 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 12, fontWeight: 500 }}>
-            {user ? initials(user.displayName) : "?"}
-          </div>
+            </button>
+          </UserMenu>
         </div>
       </header>
 

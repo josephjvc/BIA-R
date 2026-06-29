@@ -6,6 +6,7 @@ import { Header } from "./components/Header";
 import { useInstanceStore } from "../shared/store/instance.store";
 import { useSidebarStore } from "../shared/store/sidebar.store";
 import { useAuthStore } from "../shared/store/auth.store";
+import { UserMenu } from "./components/UserMenu";
 import { setSearchContext } from "./components/searchStore";
 
 const meta: Record<string, { titleKey: string; subtitleKey: string }> = {
@@ -75,9 +76,11 @@ export default function WorkspaceLayout() {
             <div className="truncate" style={{ fontSize: 10, color: "#64748B" }}>{activeInstance.name}</div>
           </div>
         </div>
-        <div className="size-9 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white shrink-0" style={{ fontSize: 12, fontWeight: 500 }}>
-          {user ? initials(user.displayName) : "?"}
-        </div>
+        <UserMenu>
+          <button className="size-9 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white shrink-0 cursor-pointer" style={{ fontSize: 12, fontWeight: 500 }}>
+            {user ? initials(user.displayName) : "?"}
+          </button>
+        </UserMenu>
       </div>
 
       {/* Sidebar — desktop sticky, mobile drawer */}

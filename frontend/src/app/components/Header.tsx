@@ -3,6 +3,7 @@ import { Search, Bell, Globe, HelpCircle } from "lucide-react";
 import { useLang, setLang, t } from "./i18n";
 import { useSearch, setSearch, useSearchContext } from "./searchStore";
 import { useAuthStore } from "../../shared/store/auth.store";
+import { UserMenu } from "./UserMenu";
 
 const placeholders: Record<string, string> = {
   "instances:active": "Search instances by name, organization, owner, date, status…",
@@ -116,15 +117,17 @@ export function Header({ titleKey, subtitleKey }: { titleKey: string; subtitleKe
           <span className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-emerald-500" />
         </button>
 
-        <div className="hidden xl:flex items-center gap-3 pl-3 border-l border-black/5">
-          <div className="text-right">
-            <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{user?.displayName || "User"}</div>
-            <div style={{ fontSize: 11, color: "#64748B" }}>{t("header.role")}</div>
-          </div>
-          <div className="size-10 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 13, fontWeight: 500 }}>
-            {user ? initials(user.displayName) : "?"}
-          </div>
-        </div>
+        <UserMenu>
+          <button className="hidden xl:flex items-center gap-3 pl-3 border-l border-black/5 cursor-pointer">
+            <div className="text-right">
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#0A2540" }}>{user?.displayName || "User"}</div>
+              <div style={{ fontSize: 11, color: "#64748B" }}>{t("header.role")}</div>
+            </div>
+            <div className="size-10 rounded-full bg-gradient-to-br from-[#1E63D9] to-[#0A2540] flex items-center justify-center text-white" style={{ fontSize: 13, fontWeight: 500 }}>
+              {user ? initials(user.displayName) : "?"}
+            </div>
+          </button>
+        </UserMenu>
       </div>
     </header>
   );
