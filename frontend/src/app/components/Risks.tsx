@@ -1,17 +1,10 @@
+import { useParams } from "react-router";
 import { Card, Chip, PrimaryButton, SecondaryButton, SectionTitle } from "./shared";
-import { Plus } from "lucide-react";
-
-const risks = [
-  { r: "Supplier concentration (packaging)", proc: "Raw material supply", p: 4, i: 5, lv: "critical", lvl: "Critical", t: "Mitigate", owner: "J. Rivas" },
-  { r: "Port strike — Callao", proc: "Last-mile distribution", p: 3, i: 5, lv: "high", lvl: "High", t: "Transfer", owner: "M. Quispe" },
-  { r: "Refrigeration unit failure", proc: "Cold-chain monitoring", p: 3, i: 4, lv: "high", lvl: "High", t: "Mitigate", owner: "K. Mendoza" },
-  { r: "ERP downtime > 4h", proc: "Customer billing", p: 2, i: 4, lv: "medium", lvl: "Medium", t: "Mitigate", owner: "L. Ortega" },
-  { r: "Currency volatility (USD/PEN)", proc: "Finance", p: 4, i: 2, lv: "medium", lvl: "Medium", t: "Accept", owner: "L. Ortega" },
-  { r: "Cyber phishing campaign", proc: "IT operations", p: 3, i: 3, lv: "medium", lvl: "Medium", t: "Mitigate", owner: "D. Romero" },
-  { r: "Minor packaging defects", proc: "Production", p: 2, i: 1, lv: "low", lvl: "Low", t: "Accept", owner: "R. Salazar" },
-];
+import { Plus, Loader2 } from "lucide-react";
+import { useRisks } from "../../shared/queries/risks.queries";
 
 const colors = ["#10B981", "#34D399", "#FBBF24", "#F97316", "#E11D48"];
+
 function cellColor(p: number, i: number) {
   const score = (p + i) / 2;
   if (score <= 1.5) return colors[0];
@@ -22,6 +15,21 @@ function cellColor(p: number, i: number) {
 }
 
 export function Risks() {
+  const { instanceId } = useParams<{ instanceId: string }>();
+  const { data: risks, isLoading } = useRisks(instanceId);
+
+  if (isLoading) {
+    return <div className="p-10 flex items-center justify-center"><Loader2 className="size-6 animate-spin text-slate-400" /></div>;
+  }
+
+  const all = risks || [];
+  const matrix = [5, 4, 3, 2, 1].map(p => [1, 2, 3, 4, 5].map(i => all.filter(r => r.probability === p && r.impact === i).length));
+  const mitigating = all.filter(r => r.treatment === "Mitigate").length;
+  const transferring = all.filter(r => r.treatment === "Transfer").length;
+  const accepting = all.filter(r => r.treatment === "Accept").length;
+  const avoiding = all.filter(r => r.treatment === "Avoid").length;
+  const totalTreatments = mitigating + transferring + accepting + avoiding || 1;
+
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-5 sm:space-y-6">
       <div className="grid grid-cols-[480px_1fr] gap-6">
@@ -33,9 +41,9 @@ export function Risks() {
             </div>
             <div className="flex-1">
               <div className="grid grid-cols-5 gap-1.5">
-                {[5, 4, 3, 2, 1].map((p) =>
-                  [1, 2, 3, 4, 5].map((i) => {
-                    const count = risks.filter(r => r.p === p && r.i === i).length;
+                {[5, 4, 3, 2, 1].map((p, pi) =>
+                  [1, 2, 3, 4, 5].map((i, ii) => {
+                    const count = matrix[pi][ii];
                     return (
                       <div key={`${p}-${i}`} className="aspect-square rounded-xl flex items-center justify-center transition hover:scale-105" style={{ background: cellColor(p, i), opacity: count > 0 ? 1 : 0.18 }}>
                         {count > 0 && <span style={{ fontSize: 16, fontWeight: 600, color: "white" }}>{count}</span>}
@@ -71,28 +79,29 @@ export function Risks() {
             <thead>
               <tr style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500, letterSpacing: "0.04em" }}>
                 <th className="text-left pb-3 uppercase">Risk</th>
-                <th className="text-left pb-3 uppercase">Process</th>
-                <th className="text-left pb-3 uppercase">P</th>
-                <th className="text-left pb-3 uppercase">I</th>
+                <th className="text-left pb-3 uppercase">Prob.</th>
+                <th className="text-left pb-3 uppercase">Impact</th>
                 <th className="text-left pb-3 uppercase">Level</th>
                 <th className="text-left pb-3 uppercase">Treatment</th>
                 <th className="text-left pb-3 uppercase">Owner</th>
               </tr>
             </thead>
             <tbody>
-              {risks.map((r, i) => (
+              {all.map((r, i) => (
                 <tr key={i} className="border-t border-black/5 hover:bg-slate-50">
-                  <td className="py-3.5 pr-4" style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{r.r}</td>
-                  <td className="py-3.5" style={{ fontSize: 12, color: "#475569" }}>{r.proc}</td>
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.p}</td>
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.i}</td>
-                  <td className="py-3.5"><Chip tone={r.lv as any}>{r.lvl}</Chip></td>
-                  <td className="py-3.5" style={{ fontSize: 12, color: "#475569" }}>{r.t}</td>
-                  <td className="py-3.5" style={{ fontSize: 12, color: "#475569" }}>{r.owner}</td>
+                  <td className="py-3.5 pr-4" style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{r.name}</td>
+                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.probability}</td>
+                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.impact}</td>
+                  <td className="py-3.5"><Chip tone={(r.riskLevel || "").toLowerCase() as any}>{r.riskLevel || "-"}</Chip></td>
+                  <td className="py-3.5" style={{ fontSize: 12, color: "#475569" }}>{r.treatment || "-"}</td>
+                  <td className="py-3.5" style={{ fontSize: 12, color: "#475569" }}>{r.owner || "-"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {all.length === 0 && (
+            <div className="py-10 text-center" style={{ color: "#94A3B8", fontSize: 13 }}>No risks registered yet.</div>
+          )}
         </Card>
       </div>
 
@@ -100,10 +109,10 @@ export function Risks() {
         <SectionTitle title="Treatment summary" action={<SecondaryButton>Export ISO 31000 report</SecondaryButton>} />
         <div className="grid grid-cols-4 gap-4">
           {[
-            { l: "Mitigate", v: 18, pct: 60, c: "#1E63D9" },
-            { l: "Transfer", v: 6, pct: 20, c: "#10B981" },
-            { l: "Accept", v: 4, pct: 13, c: "#F59E0B" },
-            { l: "Avoid", v: 2, pct: 7, c: "#E11D48" },
+            { l: "Mitigate", v: mitigating, pct: Math.round(migrating / totalTreatments * 100), c: "#1E63D9" },
+            { l: "Transfer", v: transferring, pct: Math.round(transferring / totalTreatments * 100), c: "#10B981" },
+            { l: "Accept", v: accepting, pct: Math.round(accepting / totalTreatments * 100), c: "#F59E0B" },
+            { l: "Avoid", v: avoiding, pct: Math.round(avoiding / totalTreatments * 100), c: "#E11D48" },
           ].map((t) => (
             <div key={t.l} className="p-5 rounded-2xl bg-slate-50/60 border border-black/5">
               <div style={{ fontSize: 12, color: "#64748B", fontWeight: 500 }}>{t.l}</div>

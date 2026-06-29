@@ -1,5 +1,7 @@
+import { useParams } from "react-router";
 import { Card, Chip, PrimaryButton, SecondaryButton, SectionTitle } from "./shared";
-import { DollarSign, Cog, Scale, MessageSquareWarning, Server, Check } from "lucide-react";
+import { DollarSign, Cog, Scale, MessageSquareWarning, Server, Loader2, Check } from "lucide-react";
+import { useAssessments } from "../../shared/queries/bia.queries";
 
 const criteria = [
   { icon: DollarSign, name: "Financial", desc: "Loss ≥ USD 100K", color: "from-blue-50 to-blue-100/40", active: true },
@@ -9,15 +11,14 @@ const criteria = [
   { icon: Server, name: "Technological", desc: "System unavailability", color: "from-emerald-50 to-emerald-100/40" },
 ];
 
-const bia = [
-  { p: "Last-mile distribution", cat: "Operational", lv: "Severe", mtpd: "8h", rto: "4h", rpo: "30m", crit: 92, tone: "critical" },
-  { p: "Cold-chain monitoring", cat: "Operational", lv: "Severe", mtpd: "6h", rto: "2h", rpo: "15m", crit: 89, tone: "critical" },
-  { p: "Raw material supply", cat: "Financial", lv: "High", mtpd: "24h", rto: "12h", rpo: "1h", crit: 86, tone: "high" },
-  { p: "Bottling line A", cat: "Operational", lv: "High", mtpd: "12h", rto: "6h", rpo: "1h", crit: 78, tone: "high" },
-  { p: "Customer billing", cat: "Financial", lv: "Moderate", mtpd: "48h", rto: "24h", rpo: "4h", crit: 64, tone: "medium" },
-];
-
 export function BIA() {
+  const { instanceId } = useParams<{ instanceId: string }>();
+  const { data: assessments, isLoading } = useAssessments(instanceId);
+
+  if (isLoading) {
+    return <div className="p-10 flex items-center justify-center"><Loader2 className="size-6 animate-spin text-slate-400" /></div>;
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-5 sm:space-y-6">
       <Card className="p-6">
@@ -41,61 +42,47 @@ export function BIA() {
 
       <div className="grid grid-cols-[1fr_400px] gap-6">
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-1">
-            <SectionTitle title="Prioritized processes" />
-          </div>
+          <SectionTitle title="Prioritized processes" />
           <table className="w-full">
             <thead>
               <tr style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500, letterSpacing: "0.04em" }}>
                 <th className="text-left pb-3 uppercase">Process</th>
-                <th className="text-left pb-3 uppercase">Category</th>
-                <th className="text-left pb-3 uppercase">Level</th>
                 <th className="text-left pb-3 uppercase">MTPD</th>
                 <th className="text-left pb-3 uppercase">RTO</th>
                 <th className="text-left pb-3 uppercase">RPO</th>
                 <th className="text-right pb-3 uppercase">Score</th>
+                <th className="text-left pb-3 uppercase">Criticality</th>
               </tr>
             </thead>
             <tbody>
-              {bia.map((r, i) => (
+              {(assessments || []).map((a, i) => (
                 <tr key={i} className="border-t border-black/5 hover:bg-slate-50">
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{r.p}</td>
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.cat}</td>
-                  <td className="py-3.5"><Chip tone={r.tone as any}>{r.lv}</Chip></td>
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.mtpd}</td>
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.rto}</td>
-                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{r.rpo}</td>
-                  <td className="py-3.5 text-right" style={{ fontSize: 13, color: "#0A2540", fontWeight: 600 }}>{r.crit}</td>
+                  <td className="py-3.5" style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{a.processName || "-"}</td>
+                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{a.mtpd != null ? a.mtpd + " min" : "-"}</td>
+                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{a.rto != null ? a.rto + " min" : "-"}</td>
+                  <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{a.rpo != null ? a.rpo + " min" : "-"}</td>
+                  <td className="py-3.5 text-right" style={{ fontSize: 13, color: "#0A2540", fontWeight: 600 }}>{a.impactScore != null ? a.impactScore : "-"}</td>
+                  <td className="py-3.5"><Chip tone={a.criticality === "critical" ? "critical" : a.criticality === "high" ? "high" : "medium"}>{a.criticality || "-"}</Chip></td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {(!assessments || assessments.length === 0) && (
+            <div className="py-10 text-center" style={{ color: "#94A3B8", fontSize: 13 }}>No BIA assessments yet.</div>
+          )}
         </Card>
 
         <Card className="p-6 h-fit">
           <SectionTitle title="Register process impact" />
           <div className="space-y-4">
             <Field label="Process">
-              <select className="bia-input"><option>Last-mile distribution</option><option>Cold-chain monitoring</option></select>
-            </Field>
-            <Field label="Impact category">
-              <select className="bia-input"><option>Operational</option><option>Financial</option><option>Reputational</option></select>
-            </Field>
-            <Field label="Impact level">
-              <div className="grid grid-cols-4 gap-2">
-                {["Low", "Mod.", "High", "Severe"].map((l, i) => (
-                  <button key={l} className={`h-9 rounded-xl border ${i === 3 ? "bg-[#0A2540] text-white border-transparent" : "bg-white border-black/10 text-slate-600"}`} style={{ fontSize: 12, fontWeight: 500 }}>{l}</button>
-                ))}
-              </div>
+              <select className="bia-input"><option>Select process</option></select>
             </Field>
             <div className="grid grid-cols-3 gap-3">
-              <Field label="MTPD"><input defaultValue="8h" className="bia-input" /></Field>
-              <Field label="RTO"><input defaultValue="4h" className="bia-input" /></Field>
-              <Field label="RPO"><input defaultValue="30m" className="bia-input" /></Field>
+              <Field label="MTPD (min)"><input type="number" className="bia-input" /></Field>
+              <Field label="RTO (min)"><input type="number" className="bia-input" /></Field>
+              <Field label="RPO (min)"><input type="number" className="bia-input" /></Field>
             </div>
-            <Field label="Notes">
-              <textarea rows={3} defaultValue="Critical during peak summer demand in coastal regions." className="bia-input resize-none" />
-            </Field>
             <div className="flex gap-2 pt-2">
               <PrimaryButton>Save analysis</PrimaryButton>
               <SecondaryButton>Cancel</SecondaryButton>
