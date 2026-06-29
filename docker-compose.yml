@@ -36,6 +36,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_PROFILES_ACTIVE: dev
       JWT_SECRET: ${JWT_SECRET}
+      APP_EXPORTS_DIR: /data/exports
+    volumes:
+      - exports_data:/data/exports
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,3 +80,4 @@ services:
 
 volumes:
   postgres_data:
+  exports_data:

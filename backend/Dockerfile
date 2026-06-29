@@ -2,6 +2,7 @@ FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S biar && adduser -S biar -G biar
 WORKDIR /app
 COPY target/*.jar app.jar
+RUN mkdir -p /data/exports && chown -R biar:biar /data/exports && chmod -R 755 /data/exports
 RUN chown -R biar:biar /app
 USER biar
 EXPOSE 8080

@@ -5,7 +5,11 @@ import com.biar.entity.User;
 import com.biar.security.CurrentUser;
 import com.biar.service.ExportService;
 import jakarta.validation.Valid;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,5 +37,20 @@ public class ExportController {
                                                    @CurrentUser User user) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(exportService.createExport(instanceId, req, user));
+    }
+
+    @GetMapping("/{exportId}/download")
+    public ResponseEntity<Resource> downloadExport(@PathVariable UUID instanceId,
+                                                    @PathVariable UUID exportId) {
+        var filePath = exportService.getExportFilePath(exportId);
+        var resource = new FileSystemResource(filePath);
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("text/csv"))
+            .header(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + filePath.getFileName().toString() + "\"")
+            .body(resource);
     }
 }

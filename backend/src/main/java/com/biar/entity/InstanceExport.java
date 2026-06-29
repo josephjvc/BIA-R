@@ -22,6 +22,9 @@ public class InstanceExport {
     @Column(name = "file_name", nullable = false)
     private String fileName;
 
+    @Column(name = "file_path")
+    private String filePath;
+
     @Column(name = "file_size")
     private Long fileSize;
 
@@ -47,6 +50,8 @@ public class InstanceExport {
     public void setType(String type) { this.type = type; }
     public String getFileName() { return fileName; }
     public void setFileName(String fileName) { this.fileName = fileName; }
+    public String getFilePath() { return filePath; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
     public Long getFileSize() { return fileSize; }
     public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
     public User getExportedBy() { return exportedBy; }
