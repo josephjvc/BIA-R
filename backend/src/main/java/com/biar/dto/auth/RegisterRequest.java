@@ -20,7 +20,7 @@ public class RegisterRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
-    @NotBlank(message = "Organization name is required")
+    @Size(max = 255)
     private String organizationName;
 
     public String getName() { return name; }

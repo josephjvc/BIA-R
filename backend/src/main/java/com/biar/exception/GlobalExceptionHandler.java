@@ -43,6 +43,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        ErrorResponse res = new ErrorResponse(HttpStatus.FORBIDDEN.value(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(res);
+    }
+
     @ExceptionHandler(InvalidStatusTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransition(InvalidStatusTransitionException ex) {
         ErrorResponse res = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage());

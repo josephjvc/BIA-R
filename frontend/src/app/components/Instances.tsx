@@ -14,6 +14,8 @@ import {
   useActivityLog, useParticipants,
 } from "../../shared/queries/instances.queries";
 import { useInstance } from "../../shared/queries/instances.queries";
+import { useComments, useCreateComment, useDeleteComment } from "../../shared/queries/comments.queries";
+import { useAuthStore } from "../../shared/store/auth.store";
 import type { InstanceSummary, InstanceStatus } from "../../shared/types/instance";
 
 // ───────────────────────── types & helpers
@@ -602,7 +604,6 @@ function InstanceDetailDrawer({
   instanceId: string; instanceSummary: InstanceSummary; onClose: () => void; onEdit: () => void; onExportHistory: () => void; onOpenWorkspace?: () => void;
 }) {
   const [tab, setTab] = useState<"overview" | "activity" | "comments">("overview");
-  const [commentText, setCommentText] = useState("");
 
   const { data: fullInstance } = useInstance(instanceId);
   const { data: participants = [] } = useParticipants(instanceId);
@@ -734,29 +735,7 @@ function InstanceDetailDrawer({
             </div>
           )}
 
-          {tab === "comments" && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="size-4 text-slate-500" />
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#0A2540" }}>Comments & change notes</div>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-50 text-center" style={{ fontSize: 12, color: "#64748B" }}>
-                Comments will be available in a future update.
-              </div>
-              <div className="mt-3 flex items-end gap-2">
-                <textarea
-                  value={commentText}
-                  onChange={e => setCommentText(e.target.value)}
-                  rows={2}
-                  placeholder="Add comment or change note…"
-                  disabled
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-black/5 focus:bg-white focus:border-[#1E63D9]/40 outline-none resize-none opacity-50"
-                  style={{ fontSize: 12 }}
-                />
-                <PrimaryButton disabled>Post</PrimaryButton>
-              </div>
-            </div>
-          )}
+          {tab === "comments" && <CommentsSection instanceId={instanceId} />}
         </div>
 
         {/* footer actions */}
@@ -769,6 +748,70 @@ function InstanceDetailDrawer({
             <SecondaryButton><span className="inline-flex items-center gap-1.5 justify-center w-full"><Archive className="size-3.5" /> Archive instance</span></SecondaryButton>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CommentsSection({ instanceId }: { instanceId: string }) {
+  const currentUser = useAuthStore((s) => s.user);
+  const { data: comments = [], isLoading } = useComments(instanceId);
+  const createComment = useCreateComment(instanceId);
+  const deleteComment = useDeleteComment(instanceId);
+  const [text, setText] = useState("");
+
+  const handlePost = () => {
+    if (!text.trim()) return;
+    createComment.mutate({ content: text.trim() }, { onSuccess: () => setText("") });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <MessageSquare className="size-4 text-slate-500" />
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#0A2540" }}>Comments & change notes</div>
+      </div>
+
+      {isLoading ? (
+        <div className="p-4 rounded-xl bg-slate-50 text-center" style={{ fontSize: 12, color: "#64748B" }}>Loading comments…</div>
+      ) : comments.length === 0 ? (
+        <div className="p-4 rounded-xl bg-slate-50 text-center" style={{ fontSize: 12, color: "#64748B" }}>No comments yet.</div>
+      ) : (
+        <div className="space-y-3 mb-4">
+          {comments.map((c) => (
+            <div key={c.id} className="p-3 rounded-xl bg-slate-50 border border-black/5">
+              <div className="flex items-center justify-between">
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#0A2540" }}>{c.userDisplayName}</div>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: 10, color: "#94A3B8" }}>{formatDate(c.createdAt)}</span>
+                  {c.userId === currentUser?.id && (
+                    <button
+                      onClick={() => deleteComment.mutate(c.id)}
+                      className="size-6 rounded-lg hover:bg-white flex items-center justify-center text-slate-400 hover:text-rose-500 transition"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-1" style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>{c.content}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          rows={2}
+          placeholder="Add comment or change note…"
+          className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-black/5 focus:bg-white focus:border-[#1E63D9]/40 outline-none resize-none"
+          style={{ fontSize: 12 }}
+        />
+        <PrimaryButton onClick={handlePost} disabled={!text.trim() || createComment.isPending}>
+          {createComment.isPending ? "Posting…" : "Post"}
+        </PrimaryButton>
       </div>
     </div>
   );
@@ -824,10 +867,15 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
   const createInstance = useCreateInstance();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [company, setCompany] = useState("");
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    createInstance.mutate({ name: name.trim(), description: description.trim() || undefined }, {
+    createInstance.mutate({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      organizationName: company.trim() || undefined,
+    }, {
       onSuccess: onClose,
     });
   };
@@ -866,6 +914,17 @@ function NewInstanceModal({ onClose }: { onClose: () => void }) {
                 placeholder="Briefly describe the scope of this continuity analysis…"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <Field label="Company (optional)">
+              <input
+                className={inputCls}
+                style={{ fontSize: 13 }}
+                placeholder="e.g. Acme Corp"
+                value={company}
+                onChange={e => setCompany(e.target.value)}
               />
             </Field>
           </div>

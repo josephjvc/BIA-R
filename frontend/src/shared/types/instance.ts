@@ -36,6 +36,7 @@ export interface CreateInstancePayload {
   description?: string;
   periodStart?: string;
   periodEnd?: string;
+  organizationName?: string;
 }
 
 export interface UpdateInstancePayload {

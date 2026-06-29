@@ -12,6 +12,8 @@ import { useSidebarStore } from "../../shared/store/sidebar.store";
 import { statusMeta } from "./Instances";
 import type { InstanceStatus } from "../../shared/types/instance";
 import { useUpdateStatus, useArchiveInstance, useDuplicateInstance, useActivityLog } from "../../shared/queries/instances.queries";
+import { useComments } from "../../shared/queries/comments.queries";
+import type { Comment } from "../../shared/types/comment";
 
 export type Screen = "dashboard" | "context" | "bia" | "risks" | "integrated" | "reports";
 
@@ -60,6 +62,7 @@ export function Sidebar() {
   };
 
   const { data: activityLog = [] } = useActivityLog(instanceId);
+  const { data: comments = [] } = useComments(instanceId);
 
   const recentChanges: Change[] = activityLog.slice(0, 5).map(e => {
     const icon = e.action.includes("STATUS") ? CheckCircle2 : e.action.includes("CREATED") ? Plus : FilePen;
@@ -193,13 +196,36 @@ export function Sidebar() {
         <div className="mx-3 mt-3 pt-3 border-t border-black/5">
           <AccordionHeader
             title="Latest comments"
-            count={0}
+            count={comments.length}
             open={commentsOpen}
             onToggle={() => setCommentsOpen((v) => !v)}
           />
           {commentsOpen && (
             <div className="mt-1">
-              <EmptyLine text="Comments coming soon" />
+              {comments.length === 0 ? (
+                <EmptyLine text="No comments yet" />
+              ) : (
+                <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                  {comments.slice(0, 5).map((c) => (
+                    <div key={c.id} className="p-2 rounded-lg hover:bg-slate-50">
+                      <div className="flex items-center gap-1.5">
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#0A2540" }}>{c.userDisplayName}</span>
+                        <span style={{ fontSize: 10, color: "#94A3B8" }}>· {formatDateShort(c.createdAt)}</span>
+                      </div>
+                      <div className="mt-0.5 truncate" style={{ fontSize: 11.5, color: "#475569" }}>{c.content}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {comments.length > 5 && (
+                <button
+                  onClick={() => setDrawer("comments")}
+                  className="w-full mt-1 py-1.5 rounded-lg hover:bg-slate-50 text-center"
+                  style={{ fontSize: 11, color: "#1E63D9", fontWeight: 500 }}
+                >
+                  View all {comments.length} comments →
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -215,6 +241,7 @@ export function Sidebar() {
         <ActivityDrawer
           kind={drawer}
           changes={allChanges}
+          comments={comments}
           onClose={() => setDrawer(null)}
         />
       )}
@@ -391,7 +418,7 @@ function EmptyLine({ text }: { text: string }) {
   );
 }
 
-function ActivityDrawer({ kind, changes, onClose }: { kind: "changes" | "comments"; changes: Change[]; onClose: () => void }) {
+function ActivityDrawer({ kind, changes, comments, onClose }: { kind: "changes" | "comments"; changes: Change[]; comments: Comment[]; onClose: () => void }) {
   const isChanges = kind === "changes";
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -434,10 +461,25 @@ function ActivityDrawer({ kind, changes, onClose }: { kind: "changes" | "comment
                 );
               })}
             </ul>
-          ) : (
+          ) : comments.length === 0 ? (
             <div className="p-4 text-center" style={{ fontSize: 13, color: "#94A3B8" }}>
-              Comments will be available in a future update.
+              No comments yet.
             </div>
+          ) : (
+            <ul className="space-y-3">
+              {comments.map((c) => (
+                <li key={c.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50">
+                  <div className="size-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                    <MessageSquare className="size-4 text-slate-600" strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{c.userDisplayName}</div>
+                    <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.45 }}>{c.content}</div>
+                    <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>{formatDateShort(c.createdAt)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

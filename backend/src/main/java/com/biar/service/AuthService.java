@@ -42,8 +42,11 @@ public class AuthService {
             throw new DuplicateEmailException("This email is already registered");
         }
 
-        Organization org = new Organization(req.getOrganizationName());
-        org = organizationRepository.save(org);
+        Organization org = null;
+        if (req.getOrganizationName() != null && !req.getOrganizationName().isBlank()) {
+            org = organizationRepository.findByName(req.getOrganizationName().trim())
+                .orElseGet(() -> organizationRepository.save(new Organization(req.getOrganizationName().trim())));
+        }
 
         User user = userMapper.toEntity(req);
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));

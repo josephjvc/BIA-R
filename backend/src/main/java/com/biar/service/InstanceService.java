@@ -27,6 +27,7 @@ public class InstanceService {
     private final InstanceMapper instanceMapper;
     private final StatusTransitionService statusTransitionService;
     private final ActivityLogService activityLogService;
+    private final InstanceAuthorizationService auth;
 
     public InstanceService(InstanceRepository instanceRepository,
                            InstanceParticipantRepository participantRepository,
@@ -39,7 +40,8 @@ public class InstanceService {
                            OrganizationRepository organizationRepository,
                            InstanceMapper instanceMapper,
                            StatusTransitionService statusTransitionService,
-                           ActivityLogService activityLogService) {
+                           ActivityLogService activityLogService,
+                           InstanceAuthorizationService auth) {
         this.instanceRepository = instanceRepository;
         this.participantRepository = participantRepository;
         this.processRepository = processRepository;
@@ -52,11 +54,12 @@ public class InstanceService {
         this.instanceMapper = instanceMapper;
         this.statusTransitionService = statusTransitionService;
         this.activityLogService = activityLogService;
+        this.auth = auth;
     }
 
     @Transactional(readOnly = true)
-    public List<InstanceSummaryDto> getInstances(UUID organizationId) {
-        return instanceRepository.findByOrganizationIdOrderByCreatedAtDesc(organizationId)
+    public List<InstanceSummaryDto> getInstances(UUID userId) {
+        return instanceRepository.findInstancesByUser(userId)
             .stream()
             .map(inst -> {
                 var summary = instanceMapper.toSummary(inst);
@@ -71,7 +74,8 @@ public class InstanceService {
     }
 
     @Transactional(readOnly = true)
-    public InstanceDto getInstance(UUID id) {
+    public InstanceDto getInstance(UUID id, User user) {
+        auth.requireRead(id, user);
         Instance instance = instanceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
         return instanceMapper.toDto(instance);
@@ -79,7 +83,12 @@ public class InstanceService {
 
     @Transactional
     public InstanceDto createInstance(CreateInstanceRequest req, User user) {
-        Organization org = user.getOrganization();
+        Organization org = null;
+        if (req.getOrganizationName() != null && !req.getOrganizationName().isBlank()) {
+            org = organizationRepository.findByName(req.getOrganizationName().trim())
+                .orElseGet(() -> organizationRepository.save(new Organization(req.getOrganizationName().trim())));
+        }
+
         var instance = new Instance();
         instance.setOrganization(org);
         instance.setName(req.getName());
@@ -89,6 +98,12 @@ public class InstanceService {
         instance.setCreatedBy(user);
         instance = instanceRepository.save(instance);
 
+        var participant = new InstanceParticipant();
+        participant.setInstance(instance);
+        participant.setUser(user);
+        participant.setRole("Author");
+        participantRepository.save(participant);
+
         activityLogService.log(instance.getId(), user.getId(), "INSTANCE_CREATED",
             "{\"name\":\"" + instance.getName() + "\"}");
 
@@ -97,6 +112,7 @@ public class InstanceService {
 
     @Transactional
     public InstanceDto updateInstance(UUID id, UpdateInstanceRequest req, User user) {
+        auth.requireEdit(id, user);
         Instance instance = instanceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 
@@ -112,6 +128,7 @@ public class InstanceService {
 
     @Transactional
     public void deleteInstance(UUID id, User user) {
+        auth.requireDelete(id, user);
         Instance instance = instanceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
         instanceRepository.delete(instance);
@@ -120,6 +137,7 @@ public class InstanceService {
 
     @Transactional
     public InstanceDto duplicateInstance(UUID id, User user) {
+        auth.requireEdit(id, user);
         Instance original = instanceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 
@@ -142,6 +160,7 @@ public class InstanceService {
 
     @Transactional
     public InstanceDto transitionStatus(UUID id, String action, String reason, User user) {
+        auth.requireTransition(id, user, action);
         Instance instance = instanceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
         instance = statusTransitionService.transition(instance, action, reason, user);
@@ -150,6 +169,7 @@ public class InstanceService {
 
     @Transactional
     public InstanceDto archiveInstance(UUID id, String reason, User user) {
+        auth.requireEdit(id, user);
         Instance instance = instanceRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
         instance = statusTransitionService.archive(instance, reason, user);
@@ -177,6 +197,7 @@ public class InstanceService {
 
     @Transactional
     public InstanceParticipantDto addParticipant(UUID instanceId, AddParticipantRequest req, User currentUser) {
+        auth.requireManageParticipants(instanceId, currentUser);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
         User user = userRepository.findById(req.getUserId())
@@ -207,6 +228,7 @@ public class InstanceService {
 
     @Transactional
     public void removeParticipant(UUID instanceId, UUID participantId, User currentUser) {
+        auth.requireManageParticipants(instanceId, currentUser);
         InstanceParticipant participant = participantRepository.findById(participantId)
             .orElseThrow(() -> new ResourceNotFoundException("Participant not found"));
         participantRepository.delete(participant);

@@ -166,6 +166,41 @@ ARCHIVED    ──(restore)────────────────> pre
 
 ---
 
+## Role-Based Access Control
+
+Instances are **user-centric** — a user sees instances they created or are invited to as participants. Organization/company is metadata only, not an access boundary.
+
+### Participant Roles & Permissions
+
+| Permission | Author | Responsible | Reviewer | Approver | Viewer |
+|-----------|--------|-------------|----------|----------|--------|
+| Read instance | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Edit instance details & content | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Delete instance | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Comment | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Manage participants (invite/remove) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Transition: complete (→ COMPLETED) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Transition: review (→ REVIEWED) | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Transition: approve (→ APPROVED) | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Transition: disapprove (→ DISAPPROVED) | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Transition: finish (→ FINISHED) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Archive / Restore | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Duplicate instance | ✅ | ✅ | ❌ | ❌ | ❌ |
+
+The **Author** role is assigned automatically to the instance creator. The **Responsible** role is for co-workers with Author-like access but cannot delete. The **Approver** role can also perform the `review` transition.
+
+### Authorization flow
+
+```
+InstanceController / Service
+  → InstanceAuthorizationService.requireXxx(instanceId, user)
+    → if user == createdBy → allow
+    → else look up participant role → check permission matrix
+    → else throw AccessDeniedException (403)
+```
+
+---
+
 ## Organizational Context Model
 
 The system is **process-centered**. Business unit is contextual metadata.

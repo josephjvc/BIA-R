@@ -26,25 +26,25 @@ public class InstanceController {
 
     @GetMapping
     public ResponseEntity<List<InstanceSummaryDto>> getInstances(@CurrentUser User user) {
-        return ResponseEntity.ok(instanceService.getInstances(user.getOrganization().getId()));
+        return ResponseEntity.ok(instanceService.getInstances(user.getId()));
     }
 
     @PostMapping
     public ResponseEntity<InstanceDto> createInstance(@Valid @RequestBody CreateInstanceRequest req,
-                                                      @CurrentUser User user) {
+                                                       @CurrentUser User user) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(instanceService.createInstance(req, user));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<InstanceDto> getInstance(@PathVariable UUID id) {
-        return ResponseEntity.ok(instanceService.getInstance(id));
+    public ResponseEntity<InstanceDto> getInstance(@PathVariable UUID id, @CurrentUser User user) {
+        return ResponseEntity.ok(instanceService.getInstance(id, user));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<InstanceDto> updateInstance(@PathVariable UUID id,
-                                                      @Valid @RequestBody UpdateInstanceRequest req,
-                                                      @CurrentUser User user) {
+                                                       @Valid @RequestBody UpdateInstanceRequest req,
+                                                       @CurrentUser User user) {
         return ResponseEntity.ok(instanceService.updateInstance(id, req, user));
     }
 
@@ -64,15 +64,15 @@ public class InstanceController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<InstanceDto> updateStatus(@PathVariable UUID id,
-                                                    @Valid @RequestBody InstanceStatusRequest req,
-                                                    @CurrentUser User user) {
+                                                     @Valid @RequestBody InstanceStatusRequest req,
+                                                     @CurrentUser User user) {
         return ResponseEntity.ok(instanceService.transitionStatus(id, req.getAction(), req.getReason(), user));
     }
 
     @PostMapping("/{id}/archive")
     public ResponseEntity<InstanceDto> archiveInstance(@PathVariable UUID id,
-                                                       @RequestBody(required = false) InstanceStatusRequest req,
-                                                       @CurrentUser User user) {
+                                                        @RequestBody(required = false) InstanceStatusRequest req,
+                                                        @CurrentUser User user) {
         String reason = req != null ? req.getReason() : null;
         return ResponseEntity.ok(instanceService.archiveInstance(id, reason, user));
     }
@@ -86,16 +86,16 @@ public class InstanceController {
 
     @PostMapping("/{id}/participants")
     public ResponseEntity<InstanceParticipantDto> addParticipant(@PathVariable UUID id,
-                                                                  @Valid @RequestBody AddParticipantRequest req,
-                                                                  @CurrentUser User user) {
+                                                                   @Valid @RequestBody AddParticipantRequest req,
+                                                                   @CurrentUser User user) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(instanceService.addParticipant(id, req, user));
     }
 
     @DeleteMapping("/{id}/participants/{participantId}")
     public ResponseEntity<Void> removeParticipant(@PathVariable UUID id,
-                                                  @PathVariable UUID participantId,
-                                                  @CurrentUser User user) {
+                                                   @PathVariable UUID participantId,
+                                                   @CurrentUser User user) {
         instanceService.removeParticipant(id, participantId, user);
         return ResponseEntity.noContent().build();
     }

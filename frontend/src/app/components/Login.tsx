@@ -224,7 +224,6 @@ function SignUpCard({ onSignIn }: { onSignIn: () => void }) {
     else if (password.length < 8) e.password = "Use at least 8 characters";
     if (!confirm) e.confirm = "Required";
     else if (confirm !== password) e.confirm = "Passwords do not match";
-    if (!org.trim()) e.org = "Required";
     if (!terms) e.terms = "You must accept the terms to continue";
     setErrors(e);
     if (Object.keys(e).length > 0) return;
@@ -258,7 +257,7 @@ function SignUpCard({ onSignIn }: { onSignIn: () => void }) {
           <Field label="Password" type="password" value={password} onChange={setPassword} error={errors.password} autoComplete="new-password" />
           <Field label="Confirm password" type="password" value={confirm} onChange={setConfirm} error={errors.confirm} autoComplete="new-password" />
         </div>
-        <Field label="Organization" value={org} onChange={setOrg} error={errors.org} placeholder="e.g. Alicorp S.A." />
+        <Field label="Company (optional)" value={org} onChange={setOrg} error={errors.org} placeholder="e.g. Alicorp S.A." />
         <Checkbox checked={terms} onChange={setTerms} error={errors.terms}>
           I accept the <a className="underline hover:text-[#0A2540]" style={{ color: "#1E63D9" }}>terms</a> and <a className="underline hover:text-[#0A2540]" style={{ color: "#1E63D9" }}>privacy policy</a>.
         </Checkbox>

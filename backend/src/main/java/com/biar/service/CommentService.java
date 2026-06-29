@@ -16,11 +16,14 @@ public class CommentService {
 
     private final InstanceCommentRepository commentRepository;
     private final InstanceRepository instanceRepository;
+    private final InstanceAuthorizationService auth;
 
     public CommentService(InstanceCommentRepository commentRepository,
-                          InstanceRepository instanceRepository) {
+                          InstanceRepository instanceRepository,
+                          InstanceAuthorizationService auth) {
         this.commentRepository = commentRepository;
         this.instanceRepository = instanceRepository;
+        this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -33,6 +36,7 @@ public class CommentService {
 
     @Transactional
     public CommentDto createComment(UUID instanceId, CreateCommentRequest req, User user) {
+        auth.requireComment(instanceId, user);
         Instance instance = instanceRepository.findById(instanceId)
             .orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
 
@@ -47,6 +51,7 @@ public class CommentService {
 
     @Transactional
     public CommentDto updateComment(UUID instanceId, UUID commentId, UpdateCommentRequest req, User user) {
+        auth.requireComment(instanceId, user);
         InstanceComment comment = commentRepository.findById(commentId)
             .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
@@ -63,6 +68,7 @@ public class CommentService {
 
     @Transactional
     public void deleteComment(UUID instanceId, UUID commentId, User user) {
+        auth.requireComment(instanceId, user);
         InstanceComment comment = commentRepository.findById(commentId)
             .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
