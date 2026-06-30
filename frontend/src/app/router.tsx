@@ -5,7 +5,7 @@ import WorkspaceLayout from "./Workspace";
 import { InstancesPage } from "./components/InstancesPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { Dashboard } from "./components/Dashboard";
-import { OrgContext } from "./components/OrgContext";
+import { OrgContext } from "./components/org-context/OrgContext";
 import { BIA } from "./components/BIA";
 import { Risks } from "./components/Risks";
 import { Integrated } from "./components/Integrated";
