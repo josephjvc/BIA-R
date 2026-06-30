@@ -55,40 +55,44 @@ export function ProcessTable({
 }) {
   return (
     <Card className="p-5">
-      <table className="w-full">
-        <thead>
-          <tr style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500, letterSpacing: "0.04em" }}>
-            <th className="text-left pb-3 uppercase">Process</th>
-            <th className="text-left pb-3 uppercase">Business unit</th>
-            <th className="text-left pb-3 uppercase">Owner</th>
-            <th className="text-left pb-3 uppercase">Activities</th>
-            <th className="text-left pb-3 uppercase">Status</th>
-            <th className="text-left pb-3 uppercase">Criticality</th>
-            <th className="text-right pb-3 uppercase">Last updated</th>
-          </tr>
-        </thead>
-        <tbody>
-          {processes.map((p) => (
-            <tr
-              key={p.id}
-              onClick={() => onSelect(p)}
-              className={`cursor-pointer border-t border-black/5 ${selectedId === p.id ? "bg-blue-50/40" : "hover:bg-slate-50"}`}
-            >
-              <td className="py-3.5" style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{p.name}</td>
-              <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{p.businessUnit || "-"}</td>
-              <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{p.owner || "-"}</td>
-              <td className="py-3.5">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100" style={{ fontSize: 11, fontWeight: 500, color: "#475569" }}>
-                  {p.activities?.length || 0}
-                </span>
-              </td>
-              <td className="py-3.5"><Chip tone={statusToTone(p.status)}>{statusLabel(p.status)}</Chip></td>
-              <td className="py-3.5"><Chip tone={criticalityToTone(p.criticality || "")}>{criticalityLabel(p.criticality || "")}</Chip></td>
-              <td className="py-3.5 text-right" style={{ fontSize: 12, color: "#94A3B8" }}>{formatDate(p.updatedAt)}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px]">
+          <thead>
+            <tr style={{ fontSize: 11, color: "#94A3B8", fontWeight: 500, letterSpacing: "0.04em" }}>
+              <th className="text-left pb-3 uppercase">Process</th>
+              <th className="text-left pb-3 uppercase">Business unit</th>
+              <th className="text-left pb-3 uppercase">Owner</th>
+              <th className="text-left pb-3 uppercase">Activities</th>
+              <th className="text-left pb-3 uppercase">Deps</th>
+              <th className="text-left pb-3 uppercase">Status</th>
+              <th className="text-left pb-3 uppercase">Criticality</th>
+              <th className="text-right pb-3 uppercase">Last updated</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {processes.map((p) => (
+              <tr
+                key={p.id}
+                onClick={() => onSelect(p)}
+                className={`cursor-pointer border-t border-black/5 ${selectedId === p.id ? "bg-blue-50/40" : "hover:bg-slate-50"}`}
+              >
+                <td className="py-3.5" style={{ fontSize: 13, color: "#0A2540", fontWeight: 500 }}>{p.name}</td>
+                <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{p.businessUnit || "-"}</td>
+                <td className="py-3.5" style={{ fontSize: 13, color: "#475569" }}>{p.owner || "-"}</td>
+                <td className="py-3.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100" style={{ fontSize: 11, fontWeight: 500, color: "#475569" }}>
+                    {p.activities?.length || 0}
+                  </span>
+                </td>
+                <td className="py-3.5" style={{ fontSize: 12, color: "#94A3B8" }}>—</td>
+                <td className="py-3.5"><Chip tone={statusToTone(p.status)}>{statusLabel(p.status)}</Chip></td>
+                <td className="py-3.5"><Chip tone={criticalityToTone(p.criticality || "")}>{criticalityLabel(p.criticality || "")}</Chip></td>
+                <td className="py-3.5 text-right" style={{ fontSize: 12, color: "#94A3B8" }}>{formatDate(p.updatedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 }

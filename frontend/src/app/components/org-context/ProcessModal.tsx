@@ -97,12 +97,12 @@ export function ProcessModal({ instanceId, process, onClose }: { instanceId: str
         {
           onSuccess: (updated) => {
             const procId = updated.id;
-            // Save new activities
-            const newActs = activities.filter(a => a.isNew);
+            // Save new activities (filter empty rows)
+            const newActs = activities.filter(a => a.isNew && a.name.trim());
             if (newActs.length > 0) {
               setSavingActivities(true);
               Promise.all(newActs.map(a =>
-                createActivity.mutateAsync({ instanceId, processId: procId, data: { name: a.name, criticalTimePeriod: a.criticalTimePeriod || undefined, notes: a.notes || undefined } })
+                createActivity.mutateAsync({ instanceId, processId: procId, data: { name: a.name.trim(), criticalTimePeriod: a.criticalTimePeriod || undefined, notes: a.notes || undefined } })
               )).then(() => {
                 setSavingActivities(false);
                 toast.success("Process saved. Instance status returned to In progress.");
@@ -121,11 +121,12 @@ export function ProcessModal({ instanceId, process, onClose }: { instanceId: str
         {
           onSuccess: (created) => {
             const procId = created.id;
+            // Filter empty activity rows
             const newActs = activities.filter(a => a.name.trim());
             if (newActs.length > 0) {
               setSavingActivities(true);
               Promise.all(newActs.map(a =>
-                createActivity.mutateAsync({ instanceId, processId: procId, data: { name: a.name, criticalTimePeriod: a.criticalTimePeriod || undefined, notes: a.notes || undefined } })
+                createActivity.mutateAsync({ instanceId, processId: procId, data: { name: a.name.trim(), criticalTimePeriod: a.criticalTimePeriod || undefined, notes: a.notes || undefined } })
               )).then(() => {
                 setSavingActivities(false);
                 toast.success("Process saved. Instance status returned to In progress.");

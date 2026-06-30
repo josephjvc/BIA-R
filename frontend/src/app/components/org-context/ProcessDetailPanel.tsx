@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import { X, FileBarChart, Pencil, GitBranch, ShieldAlert } from "lucide-react";
-import { Card, Chip, SecondaryButton } from "../shared";
+import { X, FileBarChart, Pencil, GitBranch, ShieldAlert, Trash2 } from "lucide-react";
+import { Card, Chip, SecondaryButton, PrimaryButton } from "../shared";
+import { useDeleteProcess } from "../../../shared/queries/context.queries";
+import { toast } from "sonner";
 import type { BusinessProcess } from "../../../shared/types/context";
 
 type ChipTone = "neutral" | "active" | "review" | "critical" | "high" | "medium" | "low" | "draft";
@@ -42,6 +45,15 @@ export function ProcessDetailPanel({
   onEdit: () => void;
 }) {
   const navigate = useNavigate();
+  const deleteProcess = useDeleteProcess();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDelete = () => {
+    deleteProcess.mutate(
+      { instanceId, processId: process.id },
+      { onSuccess: () => { toast.success("Process deleted"); onClose(); } }
+    );
+  };
 
   return (
     <Card className="p-6 h-fit sticky top-28">
@@ -107,6 +119,36 @@ export function ProcessDetailPanel({
         <ActionButton icon={GitBranch} label="View dependencies" onClick={() => navigate(`/instances/${instanceId}/integrated`)} />
         <ActionButton icon={ShieldAlert} label="Add risk" onClick={() => navigate(`/instances/${instanceId}/risks`)} />
       </div>
+
+      {/* Delete */}
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-rose-600 hover:bg-rose-50 transition"
+          style={{ fontSize: 12, fontWeight: 500 }}
+        >
+          <Trash2 className="size-3.5" /> Delete process
+        </button>
+      </div>
+
+      {/* Delete confirmation */}
+      {showDeleteConfirm && (
+        <div className="mt-3 p-4 rounded-xl bg-rose-50 border border-rose-200">
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#BE123C" }}>Delete this process?</div>
+          <div className="mt-1" style={{ fontSize: 12, color: "#64748B" }}>This action cannot be undone. All activities will be removed.</div>
+          <div className="mt-3 flex gap-2 justify-end">
+            <SecondaryButton onClick={() => setShowDeleteConfirm(false)}>Cancel</SecondaryButton>
+            <button
+              onClick={handleDelete}
+              disabled={deleteProcess.isPending}
+              className="h-9 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white transition disabled:opacity-40"
+              style={{ fontSize: 13, fontWeight: 500 }}
+            >
+              {deleteProcess.isPending ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="mt-5 pt-4 border-t border-black/5" style={{ fontSize: 11, color: "#94A3B8" }}>
